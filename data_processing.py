@@ -1,7 +1,6 @@
-import json
-from pprint import pprint
 from textblob import TextBlob
 import pickle
+import json
 
 class Article():
   def __init__(self, json_data):
@@ -24,7 +23,6 @@ class Article():
 class Question():
   def __init__(self, question_map, text):
     self.process_question(question_map, text)
-    self.bad_question = False
 
   def process_question(self, question_map, text):
     self.q = question_map["q"]
@@ -62,8 +60,5 @@ class DataProcessor():
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  # dp.process_articles()
-  # dp.save()
+  # dp.process_articles(save=True)
   dp.load()
-
-  print(len(dp.articles))
