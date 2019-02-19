@@ -13,23 +13,23 @@ class Article():
     self.set_questions(json_data)
 
   def set_text(self, json_data):
-    self.article_text = json_data["text"]
+    self.text = json_data["text"]
   
   def set_sentences(self, json_data):
     self.sentences = [i.__str__() for i in TextBlob(json_data["text"]).sentences]
 
   def set_questions(self, json_data):
-    self.questions = [Question(q, self.article_text) for q in json_data["questions"] if "s" in q["consensus"]]
+    self.questions = [Question(q, self.text) for q in json_data["questions"] if "s" in q["consensus"]]
 
 class Question():
-  def __init__(self, question_map, article_text):
-    self.process_question(question_map, article_text)
+  def __init__(self, question_map, text):
+    self.process_question(question_map, text)
     self.bad_question = False
 
-  def process_question(self, question_map, article_text):
+  def process_question(self, question_map, text):
     self.q = question_map["q"]
     self.span = question_map["consensus"]
-    self.a = article_text[self.span["s"]:self.span["e"]-1]
+    self.a = text[self.span["s"]:self.span["e"]-1]
 
 class DataProcessor():
   def __init__(self, data_path='data/combined-newsqa-data-v1.json'):
@@ -42,8 +42,10 @@ class DataProcessor():
     self.n_articles = len(data["data"])
     self.articles = [None for i in range(self.n_articles)]
     
+    print("Processing articles ({})".format(self.n_articles))
     for idx in range(self.n_articles):
-      print(idx)
+      if idx % 1000 == 0:
+        print("{} articles processed".format(idx))
       self.articles[idx] = Article(data["data"][idx])
     
     if save:
