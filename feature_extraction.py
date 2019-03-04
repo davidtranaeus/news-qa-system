@@ -1,5 +1,5 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from data_processing import *
+from article_processing import *
 from corenlp import StanfordNLP
 from nltk import Tree
 import numpy as np
@@ -24,6 +24,6 @@ class FeatureExtractor():
   
 
 if __name__ == "__main__":
-  dp = DataProcessor()
-  dp.load()
-  fe = FeatureExtractor(dp.articles)
+  ap = ArticleProcessor()
+  ap.load()
+  fe = FeatureExtractor(ap.articles)
