@@ -1,7 +1,7 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 from data_processing import *
 from corenlp import StanfordNLP
-import nltk
+from nltk import Tree
 import numpy as np
 
 class FeatureExtractor():
@@ -12,30 +12,18 @@ class FeatureExtractor():
   
   def preprocess(self):
     tv = TfidfVectorizer()
-    self.tfidf = tv.fit_transform([i.text for i in self.articles]).toarray()
+    self.tfidf_mat = tv.fit_transform([i.raw_article_text for i in self.articles]).toarray() # (n documents, n unique tokens)
     self.id_to_token = np.asarray(tv.get_feature_names())
+    self.token_to_id = {token:idx for idx,token in enumerate(self.id_to_token)}
 
-    self.token_to_idx = dict()
-    for i in range(len(self.id_to_token)):
-      self.token_to_idx[self.id_to_token[i]] = i
-
-  def tokens(self, span):
-    return sNLP.word_tokenize(span)
-
-
-
-# def matching_word_frequencies(c, s, q, tfidf, id_to_token, token_to_id):
-#   matches = set(s).intersection(q)
-
-#   for i in matches:
-#     print(matches)
-#     print(tfidf[0][token_to_id[i]])
-
+  def tfidf(self, doc_id, token):
+    if token.lower() in self.token_to_id:
+      return self.tfidf_mat[doc_id, self.token_to_id[token.lower()]]
+    else:
+      return 0 # Return 0 if token not in tfidf dictionary
+  
 
 if __name__ == "__main__":
   dp = DataProcessor()
-  # dp.process_articles(save=True)
   dp.load()
-  articles = dp.articles
-  fe = FeatureExtractor(articles)
-  print(fe.tfidf)
+  fe = FeatureExtractor(dp.articles)
