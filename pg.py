@@ -14,9 +14,8 @@ from InferSent.models import InferSent
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
-if __name__ == '__main__':
-  
-  dp = DataProcessor()
+def pg_infersent():
+  dp = DataProcessor(data_set="squad")
   dp.load()
 
   V = 1
@@ -65,7 +64,21 @@ if __name__ == '__main__':
       else:
         results[1] += 1
 
-  # print(cosine_similarity(s_embeddings, q_embedding))
   print(results)
+
+def pg_squad():
+  with open("data/train-v2.0.json") as f:
+    data = json.load(f)
+
+  # pprint(data["data"][0]["paragraphs"][0])
+
+  for subject in data["data"]:
+    for para in subject["paragraphs"]:
+      pprint(para)
+
+
+if __name__ == '__main__':
+  # pg_squad()
+  pg_infersent()
 
 
