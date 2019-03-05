@@ -1,4 +1,4 @@
-from corenlp import StanfordNLP
+# from corenlp import StanfordNLP
 import json
 from pprint import pprint
 from textblob import TextBlob
@@ -8,27 +8,64 @@ from spacy.tokenizer import Tokenizer
 import nltk.data
 import re
 from nltk import sent_tokenize
-
+from data_processing import *
+import torch
+from InferSent.models import InferSent
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 if __name__ == '__main__':
-  # sNLP = StanfordNLP()
-
-  # ## Article
-  with open('data/combined-newsqa-data-v1.json') as f:
-  	data = json.load(f)
-  article_idx = 0
-  article = data["data"][article_idx]["text"]
-  questions = data["data"][article_idx]["questions"]
-  # article = re.sub(r'\n\s*\n', '\n\n', data["data"][article_idx]["text"])
   
-  print(len(article))
-  splitted = article.split("\n")
-  sentences = [sent_tokenize(i) for i in splitted]
-  print(sentences)
-  for i in sentences:
-    print(len(i))
+  dp = DataProcessor()
+  dp.load()
 
-  span = questions[0]["consensus"]
-  # article = " ".join(sent_tokenize(article))
-  # print(sent_tokenize(article))
-  print(article[span["s"]-6:span["e"]-6])
+  V = 1
+  # MODEL_PATH = 'InferSent/encoder/infersent%s.pkl' % V
+  MODEL_PATH = 'InferSent/encoder/infersent1.pickle'
+  params_model = {'bsize': 64, 'word_emb_dim': 300, 'enc_lstm_dim': 2048,
+                  'pool_type': 'max', 'dpout_model': 0.0, 'version': V}
+  infersent = InferSent(params_model)
+  infersent.load_state_dict(torch.load(MODEL_PATH))
+
+  W2V_PATH = 'InferSent/dataset/GloVe/glove.840B.300d.txt'
+  infersent.set_w2v_path(W2V_PATH)
+
+  sentences = []
+  for i in dp.articles:
+    for j in i.sentences:
+      sentences.append(j.text)
+    for j in i.questions:
+      for k in j.a:
+        sentences.append(k)
+      for k in j.q:
+        sentences.append(k)
+
+  print("Building vocab")
+  infersent.build_vocab_k_words(K=100000)
+  # infersent.build_vocab(sentences, tokenize=True)
+  print("Done")
+
+  idx = 1
+  q_idx = 1
+
+  results = [0,0]
+  
+  # for i in dp.articles:
+  for c,i in enumerate(dp.articles[:100]):
+    print(c)
+
+    s_embeddings = infersent.encode([s.text for s in i.sentences])
+
+    for j in i.questions:
+      q_embedding = infersent.encode([j.q])
+      scores = cosine_similarity(s_embeddings, q_embedding)
+      # if np.argmax(scores) == j.correct_sentence:
+      if j.correct_sentence in scores.argsort()[-3:][::-1]:
+        results[0] += 1
+      else:
+        results[1] += 1
+
+  # print(cosine_similarity(s_embeddings, q_embedding))
+  print(results)
+
+
