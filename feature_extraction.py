@@ -24,6 +24,6 @@ class FeatureExtractor():
   
 
 if __name__ == "__main__":
-  ap = ArticleProcessor()
-  ap.load()
-  fe = FeatureExtractor(ap.articles)
+  dp = DataProcessor()
+  dp.load()
+  fe = FeatureExtractor(dp.articles)
