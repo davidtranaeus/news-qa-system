@@ -1,5 +1,5 @@
 from textblob import TextBlob
-from corenlp import StanfordNLP
+from stanford_corenlp import StanfordNLP
 from nltk import Tree
 import pickle
 import json
@@ -37,6 +37,7 @@ class Question():
 
 class DataProcessor():
   def __init__(self, data_set="newsqa"):
+    assert data_set in ["newsqa","squad"], "warning: select an existing data set"
     self.data_set = data_set
 
   def process_data(self, save=False):

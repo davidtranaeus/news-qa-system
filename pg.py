@@ -1,4 +1,4 @@
-# from corenlp import StanfordNLP
+from stanford_corenlp import StanfordNLP
 import json
 from pprint import pprint
 from textblob import TextBlob
@@ -34,22 +34,28 @@ def pg_infersent_acc():
   dp = DataProcessor(data_set="squad")
   dp.load()
 
-  infersent = init_infersent()
+  # infersent = init_infersent()
 
-  sentences = []
-  for i in dp.articles:
-    for j in i.sentences:
-      sentences.append(j.text)
-    for j in i.questions:
-      for k in j.a:
-        sentences.append(k)
-      for k in j.q:
-        sentences.append(k)
+  # sentences = []
+  # for i in dp.articles:
+  #   for j in i.sentences:
+  #     sentences.append(j.text)
+  #   for j in i.questions:
+  #     for k in j.a:
+  #       sentences.append(k)
+  #     for k in j.q:
+  #       sentences.append(k)
 
-  print("Building vocab")
-  # infersent.build_vocab_k_words(K=100000)
-  infersent.build_vocab(sentences, tokenize=True)
-  print("Done")
+  # print("Building vocab")
+  # # infersent.build_vocab_k_words(K=100000)
+  # infersent.build_vocab(sentences, tokenize=True)
+
+  # with open("data/infersent.file", "wb") as f:
+  #   pickle.dump(infersent, f, pickle.HIGHEST_PROTOCOL)
+  # print("Done")
+
+  with open('data/infersent.file', "rb") as f:
+    infersent = pickle.load(f)
 
   results = [0,0]
   
@@ -62,8 +68,8 @@ def pg_infersent_acc():
     for j in i.questions:
       q_embedding = infersent.encode([j.q])
       scores = cosine_similarity(s_embeddings, q_embedding)
-      if np.argmax(scores) == j.correct_sentence:
-      # if j.correct_sentence in scores.argsort()[-3:][::-1]:
+      if np.argmax(scores) == j.a_sentence:
+      # if j.a_sentence in scores.argsort()[-3:][::-1]:
         results[0] += 1
       else:
         results[1] += 1
@@ -120,11 +126,28 @@ def pg_ngrams():
       if i == j:
         print(i)
 
+def pg_question_type():
+  dp = DataProcessor(data_set="squad")
+  dp.load()
+  corenlp = StanfordNLP()
+
+
+  Q = dp.articles[0].questions[0].q
+  print(Q)
+  c_tree = Tree.fromstring(corenlp.parse(Q))
+  print(c_tree)
+  print(corenlp.dependency_parse(Q))
+
+  # print(dp.articles[0].sentences[0].tokens)
+  # print(dp.articles[0].sentences[dp.articles[0].questions[0].a_sentence])
+  # print(corenlp.ner(dp.articles[0].sentences[dp.articles[0].questions[0].a_sentence].text))
+
 
 if __name__ == '__main__':
   # pg_squad()
-  # pg_infersent_acc()
+  pg_infersent_acc()
   # pg_infersent()
-  pg_ngrams()
+  # pg_ngrams()
+  # pg_question_type()
 
 

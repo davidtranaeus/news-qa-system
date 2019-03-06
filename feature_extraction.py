@@ -1,29 +1,69 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from data_processing import *
-from corenlp import StanfordNLP
+from stanford_corenlp import StanfordNLP
 from nltk import Tree
 import numpy as np
+import os
+
+# tv = TfidfVectorizer()
+# self.tfidf_mat = tv.fit_transform([i.raw_article_text for i in self.articles]).toarray() # (n documents, n unique tokens)
+# self.id_to_token = np.asarray(tv.get_feature_names())
+# self.token_to_id = {token:idx for idx,token in enumerate(self.id_to_token)}
 
 class FeatureExtractor():
   def __init__(self, articles):
     self.articles = articles
-    self.sNLP = StanfordNLP()
-    self.preprocess()
-  
-  def preprocess(self):
-    tv = TfidfVectorizer()
-    self.tfidf_mat = tv.fit_transform([i.raw_article_text for i in self.articles]).toarray() # (n documents, n unique tokens)
-    self.id_to_token = np.asarray(tv.get_feature_names())
-    self.token_to_id = {token:idx for idx,token in enumerate(self.id_to_token)}
+    self.n_articles = len(self.articles)
+    self.n_sentences = sum([len(i.sentences) for i in self.articles])
+    self.vectors = [None] * self.n_sentences
+    self.get_infersent()
 
-  def tfidf(self, doc_id, token):
-    if token.lower() in self.token_to_id:
-      return self.tfidf_mat[doc_id, self.token_to_id[token.lower()]]
+  def get_infersent(self):
+    path = 'data/infersent.file'
+    if os.path.isdir(path):
+      with open(path, "rb") as f:
+        self.infersent = pickle.load(f)
     else:
-      return 0 # Return 0 if token not in tfidf dictionary
-  
+      V = 1
+      # MODEL_PATH = 'InferSent/encoder/infersent%s.pkl' % V
+      MODEL_PATH = 'InferSent/encoder/infersent1.pickle'
+      params_model = {'bsize': 64, 'word_emb_dim': 300, 'enc_lstm_dim': 2048,
+                      'pool_type': 'max', 'dpout_model': 0.0, 'version': V}
+      self.infersent = InferSent(params_model)
+      self.infersent.load_state_dict(torch.load(MODEL_PATH))
+
+      W2V_PATH = 'InferSent/dataset/GloVe/glove.840B.300d.txt'
+      self.infersent.set_w2v_path(W2V_PATH)
+
+      sentences = []
+      for i in dp.articles:
+        for j in i.sentences:
+          sentences.append(j.text)
+        for j in i.questions:
+          for k in j.a:
+            sentences.append(k)
+          for k in j.q:
+            sentences.append(k)
+      
+      self.infersent.build_vocab(sentences, tokenize=True)
+
+      with open(path, "wb") as f:
+        pickle.dump(infersent, f, pickle.HIGHEST_PROTOCOL)
+
+  def create_vectors(self):
+    pass
+
+    
+
 
 if __name__ == "__main__":
   dp = DataProcessor()
   dp.load()
   fe = FeatureExtractor(dp.articles)
+
+  print(fe.n_articles)
+  print(fe.n_sentences)
+
+
+
