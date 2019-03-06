@@ -12,7 +12,8 @@ import os
 # self.token_to_id = {token:idx for idx,token in enumerate(self.id_to_token)}
 
 class FeatureExtractor():
-  def __init__(self, articles):
+  def __init__(self, articles, data_set='squad'):
+    self.data_set = data_set
     self.articles = articles
     self.n_articles = len(self.articles)
     self.n_sentences = sum([len(i.sentences) for i in self.articles])
@@ -20,7 +21,8 @@ class FeatureExtractor():
     self.get_infersent()
 
   def get_infersent(self):
-    path = 'data/infersent.file'
+    path = 'data/infersent-squad.file' if data_set == 'squad' else 'data/infersent-newsqa.file'
+    
     if os.path.isdir(path):
       with open(path, "rb") as f:
         self.infersent = pickle.load(f)
