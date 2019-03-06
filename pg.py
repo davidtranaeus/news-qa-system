@@ -13,6 +13,9 @@ import torch
 from InferSent.models import InferSent
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+from nltk.tokenize import word_tokenize
+from nltk.util import ngrams
+from nltk.util import bigrams
 
 def init_infersent():
   V = 1
@@ -85,9 +88,6 @@ def pg_infersent():
   D =inf.get_word_dict(sentences)
   print(D)
   
-
-
-
 def pg_squad():
   with open("data/train-v2.0.json") as f:
     data = json.load(f)
@@ -98,10 +98,33 @@ def pg_squad():
     for para in subject["paragraphs"]:
       pprint(para)
 
+def pg_ngrams():
+  dp = DataProcessor(data_set="squad")
+  dp.load()
+  text = dp.articles[0].text
+
+  sentence0 = 'this is a foo bar sentences and i want to ngramize it'
+  sentence1 = 'this is also a foo bar sentence, which i want to match'
+
+  n = 2
+  bigrams0 = list(bigrams(word_tokenize(sentence0)))
+  bigrams1 = list(bigrams(word_tokenize(sentence1)))
+
+  for i in bigrams0:
+    for j in bigrams1:
+      if i == j:
+        print(i)
+  print('--')
+  for i in word_tokenize(sentence0):
+    for j in word_tokenize(sentence1):
+      if i == j:
+        print(i)
+
 
 if __name__ == '__main__':
   # pg_squad()
   # pg_infersent_acc()
-  pg_infersent()
+  # pg_infersent()
+  pg_ngrams()
 
 

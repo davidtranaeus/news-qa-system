@@ -1,5 +1,5 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from article_processing import *
+from data_processing import *
 from corenlp import StanfordNLP
 from nltk import Tree
 import numpy as np

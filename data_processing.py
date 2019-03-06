@@ -6,6 +6,8 @@ import json
 import re
 from pprint import pprint
 from nltk import sent_tokenize
+from nltk.tokenize import word_tokenize
+from nltk.util import bigrams
 
 class Article():
   def __init__(self, text):
@@ -16,32 +18,37 @@ class Article():
 class Sentence():
   def __init__(self, text):
     self.text = text
+    self.tokens = word_tokenize(self.text)
+    self.bigrams = list(bigrams(self.tokens))
 
   def __repr__(self):
     return self.text
 
 class Question():
-  def __init__(self, span, question, answer, correct_sentence):
+  def __init__(self, span, question, answer, answer_sentence):
     self.span = span
     self.q = question
     self.a = answer
-    self.correct_sentence = correct_sentence
+    self.q_tokens = word_tokenize(self.q)
+    self.a_tokens = word_tokenize(self.a)
+    self.q_bigrams = list(bigrams(self.q_tokens))
+    self.a_bigrams = list(bigrams(self.a_tokens))
+    self.a_sentence = answer_sentence
 
 class DataProcessor():
   def __init__(self, data_set="newsqa"):
     self.data_set = data_set
-    # self.tokenizer = StanfordNLP()
 
   def process_data(self, save=False):
     if self.data_set == "newsqa":
       self.process_newsqa()
-    else:
+    elif self.data_set == "squad":
       self.process_squad()
 
     if save:
       self.save()
 
-  def process_newsqa(self, save=False):
+  def process_newsqa(self):
     with open('data/combined-newsqa-data-v1.json') as f:
       data = json.load(f)
 
@@ -87,7 +94,7 @@ class DataProcessor():
             answer_sentence
           ))
 
-  def process_squad(self, save=False):
+  def process_squad(self):
     with open("data/train-v2.0.json") as f:
       data = json.load(f)
     # data["data"][0]["paragraphs"][0]
@@ -99,11 +106,11 @@ class DataProcessor():
     
     self.articles = [None for i in range(self.n_articles)]
 
-    # for i in range(1):
-    #   subject = data["data"][i]
 
     print("Processing articles ({})".format(self.n_articles))
     current_idx = 0
+    # for i in range(1):
+    #   subject = data["data"][i]
     for subject in data["data"]:
       for para in subject["paragraphs"]:
         print("{} articles processed".format(current_idx))
@@ -166,6 +173,9 @@ if __name__ == "__main__":
   # dp.process_data(save=True)
   dp.load()
 
+  print(dp.articles[0].sentences[0].bigrams)
+
+  # DEBUG
   # article = dp.articles[0]
   # for i,j in enumerate(article.sentences):
   #   print(i,j)
