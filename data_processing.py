@@ -157,6 +157,7 @@ class DataProcessor():
 
     with open(path, "rb") as f:
       self.articles = pickle.load(f)
+      self.n_articles = len(self.articles)
 
 
 if __name__ == "__main__":

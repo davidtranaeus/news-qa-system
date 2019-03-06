@@ -14,10 +14,7 @@ from InferSent.models import InferSent
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
-def pg_infersent():
-  dp = DataProcessor(data_set="squad")
-  dp.load()
-
+def init_infersent():
   V = 1
   # MODEL_PATH = 'InferSent/encoder/infersent%s.pkl' % V
   MODEL_PATH = 'InferSent/encoder/infersent1.pickle'
@@ -28,6 +25,13 @@ def pg_infersent():
 
   W2V_PATH = 'InferSent/dataset/GloVe/glove.840B.300d.txt'
   infersent.set_w2v_path(W2V_PATH)
+  return infersent
+
+def pg_infersent_acc():
+  dp = DataProcessor(data_set="squad")
+  dp.load()
+
+  infersent = init_infersent()
 
   sentences = []
   for i in dp.articles:
@@ -40,12 +44,9 @@ def pg_infersent():
         sentences.append(k)
 
   print("Building vocab")
-  infersent.build_vocab_k_words(K=100000)
-  # infersent.build_vocab(sentences, tokenize=True)
+  # infersent.build_vocab_k_words(K=100000)
+  infersent.build_vocab(sentences, tokenize=True)
   print("Done")
-
-  idx = 1
-  q_idx = 1
 
   results = [0,0]
   
@@ -58,13 +59,34 @@ def pg_infersent():
     for j in i.questions:
       q_embedding = infersent.encode([j.q])
       scores = cosine_similarity(s_embeddings, q_embedding)
-      # if np.argmax(scores) == j.correct_sentence:
-      if j.correct_sentence in scores.argsort()[-3:][::-1]:
+      if np.argmax(scores) == j.correct_sentence:
+      # if j.correct_sentence in scores.argsort()[-3:][::-1]:
         results[0] += 1
       else:
         results[1] += 1
 
   print(results)
+
+def pg_infersent():
+  
+  inf = init_infersent()
+  object_methods = [method_name for method_name in dir(inf)
+                  if callable(getattr(inf, method_name))]
+
+
+  dp = DataProcessor(data_set="squad")
+  dp.load()
+
+  sentences = []
+  for i in dp.articles[:10]:
+    for j in i.sentences:
+      sentences.append(j.text)
+
+  D =inf.get_word_dict(sentences)
+  print(D)
+  
+
+
 
 def pg_squad():
   with open("data/train-v2.0.json") as f:
@@ -79,6 +101,7 @@ def pg_squad():
 
 if __name__ == '__main__':
   # pg_squad()
+  # pg_infersent_acc()
   pg_infersent()
 
 
