@@ -51,7 +51,10 @@ class DataProcessor():
 
   def process_existing_data(self, path):
     assert self.articles != None, "warning: no available articles"
-    # do something with present dataset
+    
+    # update existing data
+
+    
 
   def process_new_squad(self):
     with open("data/train-v2.0.json") as f:
