@@ -8,9 +8,12 @@ from pprint import pprint
 from nltk import sent_tokenize
 from nltk.tokenize import word_tokenize
 from nltk.util import bigrams
+from nltk import pos_tag
+import os
+from InferSent.models import InferSent
 
 class Article():
-  def __init__(self, text):
+  def __init__(self, text, encoder):
     self.text = text
     self.questions = []
     self.sentences = [Sentence(i) for i in sent_tokenize(self.text)]
@@ -36,20 +39,71 @@ class Question():
     self.a_sentence = answer_sentence
 
 class DataProcessor():
-  def __init__(self, data_set="newsqa"):
-    assert data_set in ["newsqa","squad"], "warning: select an existing data set"
-    self.data_set = data_set
+  def __init__(self):
+    self.articles = None
+    self.n_articles = None
+    
+  def process_new_data(self, data_set):
+    if data_set == "newsqa":
+      self.create_new_newsqa()
+    elif data_set == "squad":
+      self.create_new_squad()
 
-  def process_data(self, save=False):
-    if self.data_set == "newsqa":
-      self.process_newsqa()
-    elif self.data_set == "squad":
-      self.process_squad()
+  def process_existing_data(self, path):
+    assert self.articles != None, "warning: no available articles"
+    # do something with present dataset
 
-    if save:
-      self.save()
+  def process_new_squad(self):
+    with open("data/train-v2.0.json") as f:
+      data = json.load(f)
 
-  def process_newsqa(self):
+    self.n_articles = 0
+    for subject in data["data"]:
+      for para in subject["paragraphs"]:
+        self.n_articles += 1
+    
+    self.articles = [None for i in range(self.n_articles)]
+
+    print("Processing articles ({})".format(self.n_articles))
+    current_idx = 0
+    # for i in range(1):
+      # subject = data["data"][i]
+    for subject in data["data"]:
+      for para in subject["paragraphs"]:
+        print("{} articles processed".format(current_idx))
+        
+        self.articles[current_idx] = Article(para["context"])
+
+        for q in para["qas"]:
+          if q["is_impossible"]:
+            continue
+          
+          answer = q["answers"][0]["text"]
+          start = q["answers"][0]["answer_start"]
+          sentences = sent_tokenize(para["context"])
+          answer_sentence = None
+          total_len = 0
+          c = 0
+
+          for sentence in sentences:
+            if start <= total_len + len(sentence):
+              answer_sentence = c
+              break
+            else:
+              total_len += len(sentence)
+              c += 1
+
+          if answer_sentence != None:
+            self.articles[current_idx].questions.append(Question(
+              None,
+              q["question"],
+              answer,
+              answer_sentence
+            ))
+          
+        current_idx += 1
+
+  def process_new_newsqa(self):
     with open('data/combined-newsqa-data-v1.json') as f:
       data = json.load(f)
 
@@ -95,74 +149,13 @@ class DataProcessor():
             answer_sentence
           ))
 
-  def process_squad(self):
-    with open("data/train-v2.0.json") as f:
-      data = json.load(f)
-    # data["data"][0]["paragraphs"][0]
-
-    self.n_articles = 0
-    for subject in data["data"]:
-      for para in subject["paragraphs"]:
-        self.n_articles += 1
-    
-    self.articles = [None for i in range(self.n_articles)]
-
-
-    print("Processing articles ({})".format(self.n_articles))
-    current_idx = 0
-    # for i in range(1):
-    #   subject = data["data"][i]
-    for subject in data["data"]:
-      for para in subject["paragraphs"]:
-        print("{} articles processed".format(current_idx))
-        
-        self.articles[current_idx] = Article(para["context"])
-
-        for q in para["qas"]:
-          if q["is_impossible"]:
-            continue
-          
-          answer = q["answers"][0]["text"]
-          start = q["answers"][0]["answer_start"]
-          sentences = sent_tokenize(para["context"])
-          answer_sentence = None
-          total_len = 0
-          c = 0
-
-          for sentence in sentences:
-            if start <= total_len + len(sentence):
-              answer_sentence = c
-              break
-            else:
-              total_len += len(sentence)
-              c += 1
-
-          if answer_sentence != None:
-            self.articles[current_idx].questions.append(Question(
-              None,
-              q["question"],
-              answer,
-              answer_sentence
-            ))
-          
-        current_idx += 1
-
-
-  def save(self):
-    if self.data_set == "newsqa":
-      path = "data/articles.file"
-    else:
-      path = "data/squad.file"
-
+  def save(self, path):
     with open(path, "wb") as f:
       pickle.dump(self.articles, f, pickle.HIGHEST_PROTOCOL)
 
-  def load(self):
-    if self.data_set == "newsqa":
-      path = "data/articles.file"
-    else:
-      path = "data/squad.file"
-
+  def load(self, path):
+    # newsqa data/articles.file
+    # squad data/squad.file
     with open(path, "rb") as f:
       self.articles = pickle.load(f)
       self.n_articles = len(self.articles)
@@ -170,11 +163,12 @@ class DataProcessor():
 
 if __name__ == "__main__":
 
-  dp = DataProcessor(data_set="squad")
-  # dp.process_data(save=True)
-  dp.load()
+  dp = DataProcessor()
+  # dp.process_data(save=False)
+  # dp.save()
+  dp.load("data/squad.file")
+  print(dp.n_articles)
 
-  print(dp.articles[0].sentences[0].bigrams)
 
   # DEBUG
   # article = dp.articles[0]

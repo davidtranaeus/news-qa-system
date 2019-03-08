@@ -16,6 +16,7 @@ import numpy as np
 from nltk.tokenize import word_tokenize
 from nltk.util import ngrams
 from nltk.util import bigrams
+from nltk import pos_tag
 
 def init_infersent():
   V = 1
@@ -50,17 +51,13 @@ def pg_infersent_acc():
   # # infersent.build_vocab_k_words(K=100000)
   # infersent.build_vocab(sentences, tokenize=True)
 
-  # with open("data/infersent.file", "wb") as f:
-  #   pickle.dump(infersent, f, pickle.HIGHEST_PROTOCOL)
-  # print("Done")
-
-  with open('data/infersent.file', "rb") as f:
+  with open('data/infersent-squad.file', "rb") as f:
     infersent = pickle.load(f)
 
   results = [0,0]
   
   # for i in dp.articles:
-  for c,i in enumerate(dp.articles[:100]):
+  for c,i in enumerate(dp.articles[:1000]):
     print(c)
 
     s_embeddings = infersent.encode([s.text for s in i.sentences])
@@ -78,9 +75,8 @@ def pg_infersent_acc():
 
 def pg_infersent():
   
-  inf = init_infersent()
-  object_methods = [method_name for method_name in dir(inf)
-                  if callable(getattr(inf, method_name))]
+  with open('data/infersent-squad.file', "rb") as f:
+    infersent = pickle.load(f)
 
 
   dp = DataProcessor(data_set="squad")
@@ -89,10 +85,8 @@ def pg_infersent():
   sentences = []
   for i in dp.articles[:10]:
     for j in i.sentences:
-      sentences.append(j.text)
-
-  D =inf.get_word_dict(sentences)
-  print(D)
+      infersent.encode(j.text)
+      print("done")
   
 def pg_squad():
   with open("data/train-v2.0.json") as f:
@@ -132,21 +126,42 @@ def pg_question_type():
   corenlp = StanfordNLP()
 
 
-  Q = dp.articles[0].questions[0].q
+  # for i in range(10):
+  #   Q = dp.articles[i].questions[0].q
+  #   print(Q)
+  #   c_tree = Tree.fromstring(corenlp.parse(Q))
+  #   print(c_tree)
+
+  # Root match on compete/competed
+  Q = dp.articles[0].questions[2].q
   print(Q)
-  c_tree = Tree.fromstring(corenlp.parse(Q))
-  print(c_tree)
+  print('--')
+  print(word_tokenize(Q))
+  print('--')
   print(corenlp.dependency_parse(Q))
+  print('--')
+  print(corenlp.dependency_parse("In 2002, Beyonce quit Destiny's Child for some reason."))
+  print(word_tokenize("In 2002, Beyonce quit Destiny's Child for some reason."))
 
-  # print(dp.articles[0].sentences[0].tokens)
-  # print(dp.articles[0].sentences[dp.articles[0].questions[0].a_sentence])
-  # print(corenlp.ner(dp.articles[0].sentences[dp.articles[0].questions[0].a_sentence].text))
 
+def find_q_type(question):
+  print(question)
+  corenlp = StanfordNLP()
+  tokens = word_tokenize(question)
+  pos_tags = pos_tag(tokens)
+
+  for i,tag in enumerate(pos_tags):
+    if tag[1] in ['WRB', 'WP', 'WDT', 'WP$']:
+      return tag[1]
+  return "other"
+
+
+  
 
 if __name__ == '__main__':
   # pg_squad()
-  pg_infersent_acc()
-  # pg_infersent()
+  # pg_infersent_acc()
+  pg_infersent()
   # pg_ngrams()
   # pg_question_type()
 

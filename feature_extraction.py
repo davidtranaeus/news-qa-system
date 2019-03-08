@@ -2,6 +2,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from data_processing import *
 from stanford_corenlp import StanfordNLP
+from InferSent.models import InferSent
+import torch
 from nltk import Tree
 import numpy as np
 import os
@@ -21,12 +23,13 @@ class FeatureExtractor():
     self.get_infersent()
 
   def get_infersent(self):
-    path = 'data/infersent-squad.file' if data_set == 'squad' else 'data/infersent-newsqa.file'
+    path = 'data/infersent-squad.file' if self.data_set == 'squad' else 'data/infersent-newsqa.file'
     
     if os.path.isdir(path):
       with open(path, "rb") as f:
         self.infersent = pickle.load(f)
     else:
+      print("Setting upp infersent")
       V = 1
       # MODEL_PATH = 'InferSent/encoder/infersent%s.pkl' % V
       MODEL_PATH = 'InferSent/encoder/infersent1.pickle'
@@ -51,10 +54,11 @@ class FeatureExtractor():
       self.infersent.build_vocab(sentences, tokenize=True)
 
       with open(path, "wb") as f:
-        pickle.dump(infersent, f, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(self.infersent, f, pickle.HIGHEST_PROTOCOL)
 
-  def create_vectors(self):
+  def sentence_embeddings(self):
     pass
+
 
     
 
