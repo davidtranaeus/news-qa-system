@@ -88,15 +88,6 @@ def pg_infersent():
       infersent.encode(j.text)
       print("done")
   
-def pg_squad():
-  with open("data/train-v2.0.json") as f:
-    data = json.load(f)
-
-  # pprint(data["data"][0]["paragraphs"][0])
-
-  for subject in data["data"]:
-    for para in subject["paragraphs"]:
-      pprint(para)
 
 def pg_ngrams():
   dp = DataProcessor(data_set="squad")

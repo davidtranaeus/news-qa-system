@@ -11,50 +11,52 @@ from nltk.util import bigrams
 from nltk import pos_tag
 import os
 from InferSent.models import InferSent
+from nltk import pos_tag
 
 class Article():
-  def __init__(self, text, encoder):
+  def __init__(self, text, dep_parser):
     self.text = text
     self.questions = []
-    self.sentences = [Sentence(i) for i in sent_tokenize(self.text)]
+    self.sentences = [Sentence(i, dep_parser) for i in sent_tokenize(self.text)]
 
 class Sentence():
-  def __init__(self, text):
+  def __init__(self, text, dep_parser):
     self.text = text
     self.tokens = word_tokenize(self.text)
     self.bigrams = list(bigrams(self.tokens))
-
-  def __repr__(self):
-    return self.text
+    self.pos_tags = pos_tag(self.tokens)
+    self.dep_tree = dep_parser(self.text)
 
 class Question():
-  def __init__(self, span, question, answer, answer_sentence):
+  def __init__(self, span, question, answer, answer_sentence, dep_parser):
     self.span = span
     self.q = question
     self.a = answer
+    self.a_sentence = answer_sentence
     self.q_tokens = word_tokenize(self.q)
     self.a_tokens = word_tokenize(self.a)
     self.q_bigrams = list(bigrams(self.q_tokens))
     self.a_bigrams = list(bigrams(self.a_tokens))
-    self.a_sentence = answer_sentence
+    self.q_pos_tags = pos_tag(self.q_tokens)
+    self.a_pos_tags = pos_tag(self.a_tokens)
+    self.q_dep_tree = dep_parser(self.q)
+    self.a_dep_tree = dep_parser(self.a)
+
 
 class DataProcessor():
   def __init__(self):
     self.articles = None
     self.n_articles = None
+    self.sNLP = StanfordNLP()
     
   def process_new_data(self, data_set):
     if data_set == "newsqa":
-      self.create_new_newsqa()
+      self.process_new_newsqa()
     elif data_set == "squad":
-      self.create_new_squad()
+      self.process_new_squad()
 
-  def process_existing_data(self, path):
+  def process_existing_data(self):
     assert self.articles != None, "warning: no available articles"
-    
-    # update existing data
-
-    
 
   def process_new_squad(self):
     with open("data/train-v2.0.json") as f:
@@ -75,7 +77,7 @@ class DataProcessor():
       for para in subject["paragraphs"]:
         print("{} articles processed".format(current_idx))
         
-        self.articles[current_idx] = Article(para["context"])
+        self.articles[current_idx] = Article(para["context"], self.sNLP.dependency_parse)
 
         for q in para["qas"]:
           if q["is_impossible"]:
@@ -101,7 +103,8 @@ class DataProcessor():
               None,
               q["question"],
               answer,
-              answer_sentence
+              answer_sentence,
+              self.sNLP.dependency_parse
             ))
           
         current_idx += 1
@@ -167,10 +170,13 @@ class DataProcessor():
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  # dp.process_data(save=False)
-  # dp.save()
-  dp.load("data/squad.file")
-  print(dp.n_articles)
+  # dp.load("data/squad-v2.file")
+  # dp.process_existing_data()
+  dp.process_new_data("squad")
+  # pprint(vars(dp.articles[0]))
+  # pprint(vars(dp.articles[10000].questions[0]))
+  # pprint(vars(dp.articles[10000].sentences[0]))
+  # dp.save('data/squad-v2.file')
 
 
   # DEBUG

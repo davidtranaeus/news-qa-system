@@ -25,7 +25,7 @@ class FeatureExtractor():
   def get_infersent(self):
     path = 'data/infersent-squad.file' if self.data_set == 'squad' else 'data/infersent-newsqa.file'
     
-    if os.path.isdir(path):
+    if os.path.isfile(path):
       with open(path, "rb") as f:
         self.infersent = pickle.load(f)
     else:
@@ -65,7 +65,7 @@ class FeatureExtractor():
 
 if __name__ == "__main__":
   dp = DataProcessor()
-  dp.load()
+  dp.load("data/squad-v2.file")
   fe = FeatureExtractor(dp.articles)
 
   print(fe.n_articles)
