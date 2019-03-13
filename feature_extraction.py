@@ -10,7 +10,7 @@ import os
 
 class ArticleVectorizer():
   def __init__(self):
-    self.n_dim = 5
+    self.n_dim = 9
     self.n_sentences = 0
     self.n_questions = 0
     self.vectors = np.array([])
@@ -22,7 +22,7 @@ class ArticleVectorizer():
     with open("data/w2v.file", "rb") as f:
       self.word2vec = pickle.load(f)
 
-  def load(self, article):
+  def load_article(self, article):
     self.article = article
     self.n_sentences = len(article["sentences"])
     self.n_questions = len(article["questions"])
@@ -30,6 +30,7 @@ class ArticleVectorizer():
   def create_vectors(self):
     self.n_vectors = self.n_sentences*self.n_questions
     self.vectors = np.zeros((self.n_vectors, self.n_dim))
+    self.targets = np.zeros(self.n_vectors)
     # print(self.n_vectors)
     # print(self.n_sentences)
     # print(self.n_questions)
@@ -39,6 +40,7 @@ class ArticleVectorizer():
     self.add_matching_ngrams()
     self.add_wh_type()
     self.add_root_match()
+    self.add_targets()
   
   def add_cos_scores(self):
     #print(self.article["sentences"][0]["cos_scores"])
@@ -69,11 +71,11 @@ class ArticleVectorizer():
         tot += 1
     return tot
   
-  def add_wh_type(self):
+  def add_wh_type(self): # varför har jag denna?
     for i in range(len(self.article["questions"])):
       wh_type = self.wh_type(self.article["questions"][i]["question"]["pos_tags"])
       idxs = list(range(i, self.n_vectors, self.n_questions))
-      self.vectors[idxs, 3] = wh_type
+      self.vectors[idxs, 4+wh_type] = 1
 
   def wh_type(self, pos_tags):
     for tag in pos_tags:
@@ -87,7 +89,7 @@ class ArticleVectorizer():
     v_idx = 0
     for i in range(len(self.article["sentences"])):
       for j in range(len(self.article["questions"])):
-        self.vectors[v_idx,4] = self.root_match(
+        self.vectors[v_idx,3] = self.root_match(
           self.article["sentences"][i]["dep_tree"],
           self.article["sentences"][i]["tokens"],
           self.article["questions"][j]["question"]["dep_tree"],
@@ -99,7 +101,11 @@ class ArticleVectorizer():
     # word2vec blev denna verkligen bra. lemma?
     # print(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
     # print(self.word2vec.wv.similarity(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1]))
-    return self.word2vec_sim(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
+    try:
+      return self.word2vec_sim(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
+    except IndexError:
+      return 0
+
     # return tokens_1[tree_1[0][2]-1] == tokens_2[tree_2[0][2]-1]
 
   def word2vec_sim(self, word_1, word_2):
@@ -108,17 +114,25 @@ class ArticleVectorizer():
     except KeyError:
       return 0
 
+  def add_targets(self):
+    v_idx = 0
+    for i in range(len(self.article["sentences"])):
+      for j in range(len(self.article["sentences"][i]["cos_scores"])):
+        if self.article["questions"][j]["answer"]["answer_sent"] == i:
+          self.targets[v_idx] = 1
+        else:
+          self.targets[v_idx] = 0
+
+        v_idx += 1
+
+
 if __name__ == "__main__":
   dp = DataProcessor()
   dp.load("data/squad-v4.file")
   
   av = ArticleVectorizer()
-  
-  for i in range(100):
-    print(i)
-    av.load(dp.articles[i])
-    av.create_vectors()
-
+  av.load_article(dp.articles[0])
+  av.create_vectors()
 
 
 

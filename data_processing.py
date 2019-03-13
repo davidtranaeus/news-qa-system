@@ -101,6 +101,9 @@ class DataProcessor():
                 {"answer_sent": answer_sent}),
             })
           
+        if len(self.articles[current_idx]["questions"]) == 0:
+          print("No questions", current_idx)
+          
         current_idx += 1
 
   def read_newsqa(self):
@@ -155,9 +158,9 @@ class DataProcessor():
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  # dp.load("data/squad-v3.file")
+  dp.load("data/squad-v4.file")
   # dp.add_features()
-  # dp.save("data/squad-v4.file")
+  pprint(dp.articles[1247])
 
   # # DEBUG
   # article = dp.articles[10000]
