@@ -1,75 +1,124 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from data_processing import *
-from stanford_corenlp import StanfordNLP
+from utils.stanford_corenlp import StanfordNLP
 from InferSent.models import InferSent
 import torch
 from nltk import Tree
 import numpy as np
 import os
 
-# tv = TfidfVectorizer()
-# self.tfidf_mat = tv.fit_transform([i.raw_article_text for i in self.articles]).toarray() # (n documents, n unique tokens)
-# self.id_to_token = np.asarray(tv.get_feature_names())
-# self.token_to_id = {token:idx for idx,token in enumerate(self.id_to_token)}
+class ArticleVectorizer():
+  def __init__(self):
+    self.n_dim = 5
+    self.n_sentences = 0
+    self.n_questions = 0
+    self.vectors = np.array([])
+    self.targets = np.array([])
+    self.n_vectors = len(self.vectors)
+    self.load_w2v()
 
-class FeatureExtractor():
-  def __init__(self, articles, data_set='squad'):
-    self.data_set = data_set
-    self.articles = articles
-    self.n_articles = len(self.articles)
-    self.n_sentences = sum([len(i.sentences) for i in self.articles])
-    self.vectors = [None] * self.n_sentences
-    self.get_infersent()
+  def load_w2v(self):
+    with open("data/w2v.file", "rb") as f:
+      self.word2vec = pickle.load(f)
 
-  def get_infersent(self):
-    path = 'data/infersent-squad.file' if self.data_set == 'squad' else 'data/infersent-newsqa.file'
-    
-    if os.path.isfile(path):
-      with open(path, "rb") as f:
-        self.infersent = pickle.load(f)
-    else:
-      print("Setting upp infersent")
-      V = 1
-      # MODEL_PATH = 'InferSent/encoder/infersent%s.pkl' % V
-      MODEL_PATH = 'InferSent/encoder/infersent1.pickle'
-      params_model = {'bsize': 64, 'word_emb_dim': 300, 'enc_lstm_dim': 2048,
-                      'pool_type': 'max', 'dpout_model': 0.0, 'version': V}
-      self.infersent = InferSent(params_model)
-      self.infersent.load_state_dict(torch.load(MODEL_PATH))
+  def load(self, article):
+    self.article = article
+    self.n_sentences = len(article["sentences"])
+    self.n_questions = len(article["questions"])
+  
+  def create_vectors(self):
+    self.n_vectors = self.n_sentences*self.n_questions
+    self.vectors = np.zeros((self.n_vectors, self.n_dim))
+    # print(self.n_vectors)
+    # print(self.n_sentences)
+    # print(self.n_questions)
+    # print("\n")
 
-      W2V_PATH = 'InferSent/dataset/GloVe/glove.840B.300d.txt'
-      self.infersent.set_w2v_path(W2V_PATH)
+    self.add_cos_scores()
+    self.add_matching_ngrams()
+    self.add_wh_type()
+    self.add_root_match()
+  
+  def add_cos_scores(self):
+    #print(self.article["sentences"][0]["cos_scores"])
+    v_idx = 0
+    for i in range(len(self.article["sentences"])):
+      for j in range(len(self.article["sentences"][i]["cos_scores"])):
+        self.vectors[v_idx,0] = self.article["sentences"][i]["cos_scores"][j]
+        v_idx += 1
+  
+  def add_matching_ngrams(self):
+    v_idx = 0
+    for i in range(len(self.article["sentences"])):
+      for j in range(len(self.article["questions"])):
+        self.vectors[v_idx,1] = self.matching_ngrams(
+          self.article["sentences"][i]["tokens"],
+          self.article["questions"][j]["question"]["tokens"]
+        )
+        self.vectors[v_idx,2] = self.matching_ngrams(
+          self.article["sentences"][i]["bigrams"],
+          self.article["questions"][j]["question"]["bigrams"]
+        )
+        v_idx += 1
 
-      sentences = []
-      for i in dp.articles:
-        for j in i.sentences:
-          sentences.append(j.text)
-        for j in i.questions:
-          for k in j.a:
-            sentences.append(k)
-          for k in j.q:
-            sentences.append(k)
-      
-      self.infersent.build_vocab(sentences, tokenize=True)
+  def matching_ngrams(self, ngrams_1, ngrams_2):
+    tot = 0
+    for i in ngrams_1:
+      if i in ngrams_2:
+        tot += 1
+    return tot
+  
+  def add_wh_type(self):
+    for i in range(len(self.article["questions"])):
+      wh_type = self.wh_type(self.article["questions"][i]["question"]["pos_tags"])
+      idxs = list(range(i, self.n_vectors, self.n_questions))
+      self.vectors[idxs, 3] = wh_type
 
-      with open(path, "wb") as f:
-        pickle.dump(self.infersent, f, pickle.HIGHEST_PROTOCOL)
+  def wh_type(self, pos_tags):
+    for tag in pos_tags:
+      try:
+        return ['WRB', 'WP', 'WDT', 'WP$'].index(tag[1])
+      except ValueError:
+        continue
+    return 4
 
-  def sentence_embeddings(self):
-    pass
+  def add_root_match(self):
+    v_idx = 0
+    for i in range(len(self.article["sentences"])):
+      for j in range(len(self.article["questions"])):
+        self.vectors[v_idx,4] = self.root_match(
+          self.article["sentences"][i]["dep_tree"],
+          self.article["sentences"][i]["tokens"],
+          self.article["questions"][j]["question"]["dep_tree"],
+          self.article["questions"][j]["question"]["tokens"]
+        )
+        v_idx += 1
 
+  def root_match(self, tree_1, tokens_1, tree_2, tokens_2):
+    # word2vec blev denna verkligen bra. lemma?
+    # print(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
+    # print(self.word2vec.wv.similarity(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1]))
+    return self.word2vec_sim(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
+    # return tokens_1[tree_1[0][2]-1] == tokens_2[tree_2[0][2]-1]
 
-    
-
+  def word2vec_sim(self, word_1, word_2):
+    try:
+      return self.word2vec.wv.similarity(word_1, word_2)
+    except KeyError:
+      return 0
 
 if __name__ == "__main__":
   dp = DataProcessor()
-  dp.load("data/squad-v2.file")
-  fe = FeatureExtractor(dp.articles)
+  dp.load("data/squad-v4.file")
+  
+  av = ArticleVectorizer()
+  
+  for i in range(100):
+    print(i)
+    av.load(dp.articles[i])
+    av.create_vectors()
 
-  print(fe.n_articles)
-  print(fe.n_sentences)
 
 
 

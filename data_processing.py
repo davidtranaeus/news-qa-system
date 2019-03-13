@@ -1,4 +1,4 @@
-from stanford_corenlp import StanfordNLP
+from utils.stanford_corenlp import StanfordNLP
 import pickle
 import json
 from pprint import pprint
@@ -23,8 +23,16 @@ class DataProcessor():
       self.articles = pickle.load(f)
       self.n_articles = len(self.articles)
   
-  def add_features(self):
-    pass
+  def add_cosine_scores(self, path="data/cosine_scores.file"):
+    with open(path, "rb") as f:
+      all_scores = pickle.load(f)
+
+    for i in range(len(self.articles)):
+      for j in range(len(self.articles[i]["sentences"])):
+        self.articles[i]["sentences"][j]["cos_scores"] = []
+        for k in range(len(all_scores[i])):
+          self.articles[i]["sentences"][j]["cos_scores"].append(all_scores[i][k][j])
+      
 
   def create_features(self, text, other={}):
     tokens = word_tokenize(text)
@@ -68,7 +76,7 @@ class DataProcessor():
         # Questions
         self.articles[current_idx]["questions"] = []
 
-        # Only include questions where the answer exists in a sentence
+        # Only include questions if the answer exists in a sentence
         for idx, question in enumerate(para["qas"]):
           if question["is_impossible"]:
             continue
@@ -147,7 +155,9 @@ class DataProcessor():
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  dp.load("data/squad-v3.file")
+  # dp.load("data/squad-v3.file")
+  # dp.add_features()
+  # dp.save("data/squad-v4.file")
 
   # # DEBUG
   # article = dp.articles[10000]
