@@ -30,20 +30,19 @@ class LogisticClassifier():
   def train(self, split=0.8):
     self.split_train_test(0.8)
 
-    for i in range(1):
-      print(i)
-      for batch_n, idx in enumerate(self.train_range):
-        self.load_article(idx)
+    for batch_n, idx in enumerate(self.train_range):
+      self.load_article(idx)
 
-        # TODO Some articles does not have any questions
-        if len(self.batch_vectors) == 0:
-          continue
-        
-        # Shuffle
-        c = list(zip(self.batch_vectors, self.batch_targets))
-        random.shuffle(c)
-        self.batch_vectors, self.batch_targets = zip(*c)
-        self.clf.partial_fit(self.batch_vectors, self.batch_targets, [0,1])
+      # TODO Some articles does not have any questions
+      if len(self.batch_vectors) == 0:
+        continue
+      
+      # Shuffle
+      c = list(zip(self.batch_vectors, self.batch_targets))
+      random.shuffle(c)
+      self.batch_vectors, self.batch_targets = zip(*c)
+      self.clf.partial_fit(self.batch_vectors, self.batch_targets, [0,1])
+
 
   def split_train_test(self, split):
     total_range = list(range(self.n_articles))

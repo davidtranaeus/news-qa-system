@@ -58,7 +58,69 @@ def pg_infersent_acc():
         res[1] += 1
 
   print(res)
-  
+
+def pg_sentence_analysis():
+  dp = DataProcessor()
+  dp.load("data/squad-v4.file")
+
+  tags = {}
+
+  for i in dp.articles:
+    for j in i["questions"]:
+      wh_idx = None
+      for idx, tag in enumerate(j["question"]["pos_tags"]):
+        if tag[1] in ['WRB', 'WP', 'WDT', 'WP$']:
+          wh_idx = idx
+          break
+
+      if wh_idx == None:
+        continue
+
+      ## do all tokenizing, pos with sNLP
+      print(j["question"]["text"])
+      print("word_tokenize:", j["question"]["tokens"])
+      print("stanford tokenize:", dp.sNLP.word_tokenize(j["question"]["text"]))
+      
+      print("pos_tag:", j["question"]["pos_tags"])
+      print("stanford pos:", dp.sNLP.pos(j["question"]["text"]))
+      print(j["question"]["dep_tree"])
+
+      for edge in j["question"]["dep_tree"]:
+        if edge[2] == wh_idx + 1:
+          ent_idx = edge[1] - 1
+
+      print(j["question"]["tokens"][wh_idx], j["question"]["tokens"][ent_idx])
+      print(j["answer"]["text"])
+      
+
+      print("\n")
+
+  print(tags.items())
+
+def pg_constituents():
+  with open('data/infersent-cpu.file', "rb") as f:
+    infersent = pickle.load(f)
+
+  dp = DataProcessor()
+  dp.load("data/squad-v4.file")
+  art = dp.articles[0]
+
+  trees = [Tree.fromstring(dp.sNLP.parse(sent["text"])) for sent in art["sentences"]]
+  for i in trees:
+    i.chomsky_normal_form()
+
+  sent_idx = 3
+  for subtree in trees[sent_idx].subtrees():
+    print(" ".join(subtree.leaves()))
+
+  print('--')
+
+  for q in art["questions"]:
+    if q["answer"]["answer_sent"] == sent_idx:
+      print(q["question"]["text"])
+      print(q["answer"]["text"])
+      print("\n")
+
 
 if __name__ == '__main__':
   # pg_squad()
@@ -66,7 +128,7 @@ if __name__ == '__main__':
   # pg_infersent()
   # pg_ngrams()
   # pg_question_type()
-  pg_infersent_acc()
-  
-
-
+  # pg_infersent_acc()
+  # pg_constituents()
+  pg_sentence_analysis()
+  pass

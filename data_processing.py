@@ -3,12 +3,12 @@ import pickle
 import json
 from pprint import pprint
 from nltk import sent_tokenize
-from nltk.tokenize import word_tokenize
+#from nltk.tokenize import word_tokenize
 from nltk.util import bigrams
-from nltk import pos_tag
+#from nltk import pos_tag
 import os
 from InferSent.models import InferSent
-from nltk import pos_tag
+#from nltk import pos_tag
 
 class DataProcessor():
   def __init__(self):
@@ -35,12 +35,12 @@ class DataProcessor():
       
 
   def create_features(self, text, other={}):
-    tokens = word_tokenize(text)
+    tokens = self.sNLP.word_tokenize(text)
     return {
       "text": text,
       "tokens": tokens,
       "bigrams": list(bigrams(tokens)),
-      "pos_tags": pos_tag(tokens),
+      "pos_tags": self.sNLP.pos(text),
       "dep_tree": self.sNLP.dependency_parse(text),
       **other 
     }
@@ -158,9 +158,10 @@ class DataProcessor():
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  dp.load("data/squad-v4.file")
+  dp.read_squad()
+  dp.save("data/squad-v5.file")
+  # dp.load("data/squad-v4.file")
   # dp.add_features()
-  pprint(dp.articles[1247])
 
   # # DEBUG
   # article = dp.articles[10000]
