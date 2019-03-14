@@ -61,9 +61,7 @@ def pg_infersent_acc():
 
 def pg_sentence_analysis():
   dp = DataProcessor()
-  dp.load("data/squad-v4.file")
-
-  tags = {}
+  dp.load("data/squad-v6.file")
 
   for i in dp.articles:
     for j in i["questions"]:
@@ -77,12 +75,11 @@ def pg_sentence_analysis():
         continue
 
       ## do all tokenizing, pos with sNLP
+      print('       --------')
+      print("Question")
       print(j["question"]["text"])
-      print("word_tokenize:", j["question"]["tokens"])
-      print("stanford tokenize:", dp.sNLP.word_tokenize(j["question"]["text"]))
-      
-      print("pos_tag:", j["question"]["pos_tags"])
-      print("stanford pos:", dp.sNLP.pos(j["question"]["text"]))
+      print(j["question"]["tokens"])
+      print(j["question"]["pos_tags"])
       print(j["question"]["dep_tree"])
 
       for edge in j["question"]["dep_tree"]:
@@ -90,12 +87,12 @@ def pg_sentence_analysis():
           ent_idx = edge[1] - 1
 
       print(j["question"]["tokens"][wh_idx], j["question"]["tokens"][ent_idx])
+
+      print("\nAnswer")
       print(j["answer"]["text"])
+      print(i["sentences"][j["answer"]["answer_sent"]-1])
       
-
       print("\n")
-
-  print(tags.items())
 
 def pg_constituents():
   with open('data/infersent-cpu.file', "rb") as f:
@@ -130,5 +127,14 @@ if __name__ == '__main__':
   # pg_question_type()
   # pg_infersent_acc()
   # pg_constituents()
-  pg_sentence_analysis()
+  # pg_sentence_analysis()
+  # DEBUG
+  dp = DataProcessor()
+  dp.load('data/squad-v4.file')
+  article = dp.articles[0]
+  for i,j in enumerate(article["sentences"]):
+    print(i, j["text"])
+  for q in article["questions"]:
+    print(q["question"]["text"])
+    print(q["answer"]["answer_sent"], q["answer"]["text"])
   pass

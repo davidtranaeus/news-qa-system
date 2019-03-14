@@ -69,15 +69,16 @@ class DataProcessor():
     print("Processing articles ({})".format(self.n_articles))
     current_idx = 0
 
-    self.articles = []
-    # for i in range(1):
-    #   subject = data["data"][i]
-    for subject in data["data"]:
+    self.articles = [{} for i in range(self.n_articles)]
+
+    for i in range(1):
+      subject = data["data"][i]
+    # for subject in data["data"]:
       for para in subject["paragraphs"]:
         print("{} articles processed".format(current_idx))
         
         # Article
-        article = {
+        self.articles[current_idx] = {
           "text": para["context"],
           "sentences":[self.create_features(sent) for sent in sent_tokenize(para["context"])],
           "questions": []
@@ -91,27 +92,27 @@ class DataProcessor():
           answer_sent = None
           total_len = 0
           sent_idx = 0
-          for sent in article["sentences"]:
-            if question["answers"][0]["answer_start"] <= total_len + len(sent):
+          for sent in self.articles[current_idx]["sentences"]:
+            if question["answers"][0]["answer_start"] <= total_len + len(sent["text"]):
               answer_sent = sent_idx
               break
             else:
               total_len += len(sent["text"])
               sent_idx += 1
 
-
           if answer_sent != None:
-            article["questions"].append({
+            self.articles[current_idx]["questions"].append({
               "question": self.create_features(question["question"]),
               "answer": self.create_features(
                 question["answers"][0]["text"],
                 {"answer_sent": answer_sent}),
             })
-
-        if len(article["questions"]) != 0:
-          self.articles.append(article)
           
         current_idx += 1
+
+    print(len(self.articles))
+    self.articles = [art for art in self.articles if len(art["questions"]) != 0]
+    print(len(self.articles))
 
   def read_newsqa(self):
     pass
@@ -165,18 +166,14 @@ class DataProcessor():
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  # dp.read_squad()
-  # dp.save("data/squad-v5.file")
-  dp.load("data/squad-v6.file")
-  pprint(dp.articles[0])
+  dp.read_squad()
 
-
-  # # DEBUG
-  # article = dp.articles[10000]
-  # for i,j in enumerate(article["sentences"]):
-  #   print(i, j["text"])
-  # for q in article["questions"]:
-  #   print(q["question"]["text"])
-  #   print(q["answer"]["answer_sent"], q["answer"]["text"])
+  # DEBUG
+  article = dp.articles[0]
+  for i,j in enumerate(article["sentences"]):
+    print(i, j["text"])
+  for q in article["questions"]:
+    print(q["question"]["text"])
+    print(q["answer"]["answer_sent"], q["answer"]["text"])
 
 
