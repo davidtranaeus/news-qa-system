@@ -33,6 +33,18 @@ class DataProcessor():
         for k in range(len(all_scores[i])):
           self.articles[i]["sentences"][j]["cos_scores"].append(all_scores[i][k][j])
       
+  def adjust_data(self):
+    pass
+    # print(self.n_articles)
+    # for i in range(len(self.articles)):
+    #   if len(self.articles[i]["questions"]) == 0:
+    #     self.articles[i] = None
+
+    # self.articles = [x for x in self.articles if x is not None]
+    # print(len(self.articles))
+    # for i in self.articles:
+    #   if len(i["questions"]) == 0:
+    #     print("Found article with 0 questions")
 
   def create_features(self, text, other={}):
     tokens = self.sNLP.word_tokenize(text)
@@ -54,11 +66,10 @@ class DataProcessor():
       for para in subject["paragraphs"]:
         self.n_articles += 1
 
-    self.articles = [{} for i in range(self.n_articles)]
-
     print("Processing articles ({})".format(self.n_articles))
     current_idx = 0
 
+    self.articles = []
     # for i in range(1):
     #   subject = data["data"][i]
     for subject in data["data"]:
@@ -66,15 +77,11 @@ class DataProcessor():
         print("{} articles processed".format(current_idx))
         
         # Article
-        self.articles[current_idx]["text"] = para["context"]
-
-        # Sentences
-        self.articles[current_idx]["sentences"] = [
-          self.create_features(sent) for sent in sent_tokenize(para["context"])
-        ]
-
-        # Questions
-        self.articles[current_idx]["questions"] = []
+        article = {
+          "text": para["context"],
+          "sentences":[self.create_features(sent) for sent in sent_tokenize(para["context"])],
+          "questions": []
+        }
 
         # Only include questions if the answer exists in a sentence
         for idx, question in enumerate(para["qas"]):
@@ -84,7 +91,7 @@ class DataProcessor():
           answer_sent = None
           total_len = 0
           sent_idx = 0
-          for sent in self.articles[current_idx]["sentences"]:
+          for sent in article["sentences"]:
             if question["answers"][0]["answer_start"] <= total_len + len(sent):
               answer_sent = sent_idx
               break
@@ -94,15 +101,15 @@ class DataProcessor():
 
 
           if answer_sent != None:
-            self.articles[current_idx]["questions"].append({
+            article["questions"].append({
               "question": self.create_features(question["question"]),
               "answer": self.create_features(
                 question["answers"][0]["text"],
                 {"answer_sent": answer_sent}),
             })
-          
-        if len(self.articles[current_idx]["questions"]) == 0:
-          print("No questions", current_idx)
+
+        if len(article["questions"]) != 0:
+          self.articles.append(article)
           
         current_idx += 1
 
@@ -158,10 +165,11 @@ class DataProcessor():
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  dp.read_squad()
-  dp.save("data/squad-v5.file")
-  # dp.load("data/squad-v4.file")
-  # dp.add_features()
+  # dp.read_squad()
+  # dp.save("data/squad-v5.file")
+  dp.load("data/squad-v6.file")
+  pprint(dp.articles[0])
+
 
   # # DEBUG
   # article = dp.articles[10000]
