@@ -34,17 +34,17 @@ class DataProcessor():
           self.articles[i]["sentences"][j]["cos_scores"].append(all_scores[i][k][j])
       
   def adjust_data(self):
-    pass
-    # print(self.n_articles)
-    # for i in range(len(self.articles)):
-    #   if len(self.articles[i]["questions"]) == 0:
-    #     self.articles[i] = None
+    # pass
+    print(self.n_articles)
+    for i in range(len(self.articles)):
+      if len(self.articles[i]["questions"]) == 0:
+        self.articles[i] = None
 
-    # self.articles = [x for x in self.articles if x is not None]
-    # print(len(self.articles))
-    # for i in self.articles:
-    #   if len(i["questions"]) == 0:
-    #     print("Found article with 0 questions")
+    self.articles = [x for x in self.articles if x is not None]
+    print(len(self.articles))
+    for i in self.articles:
+      if len(i["questions"]) == 0:
+        print("Found article with 0 questions")
 
   def create_features(self, text, other={}):
     tokens = self.sNLP.word_tokenize(text)
@@ -71,9 +71,9 @@ class DataProcessor():
 
     self.articles = [{} for i in range(self.n_articles)]
 
-    for i in range(1):
-      subject = data["data"][i]
-    # for subject in data["data"]:
+    # for i in range(1):
+      # subject = data["data"][i]
+    for subject in data["data"]:
       for para in subject["paragraphs"]:
         print("{} articles processed".format(current_idx))
         
@@ -111,7 +111,7 @@ class DataProcessor():
         current_idx += 1
 
     print(len(self.articles))
-    self.articles = [art for art in self.articles if len(art["questions"]) != 0]
+    # self.articles = [art for art in self.articles if len(art["questions"]) != 0]
     print(len(self.articles))
 
   def read_newsqa(self):
@@ -166,10 +166,12 @@ class DataProcessor():
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  dp.read_squad()
+  # dp.read_squad()
+  dp.load('data/squad-v6.file')
 
   # DEBUG
   article = dp.articles[0]
+  pprint(article)
   for i,j in enumerate(article["sentences"]):
     print(i, j["text"])
   for q in article["questions"]:

@@ -32,10 +32,7 @@ class LogisticClassifier():
 
     for batch_n, idx in enumerate(self.train_range):
       self.load_article(idx)
-
-      # TODO Some articles does not have any questions
-      if len(self.batch_vectors) == 0:
-        continue
+      print(batch_n)
       
       # Shuffle
       c = list(zip(self.batch_vectors, self.batch_targets))
@@ -54,9 +51,6 @@ class LogisticClassifier():
     acc = 0
     for i in self.test_range:
       self.load_article(i)
-      # TODO Some articles does not have any questions
-      if len(self.batch_vectors) == 0:
-        continue
       acc += self.clf.score(self.batch_vectors, self.batch_targets)
     print(acc/len(self.test_range))
     print(self.clf.coef_)
@@ -64,6 +58,6 @@ class LogisticClassifier():
 
 if __name__ == "__main__":
   lc = LogisticClassifier()
-  lc.load_data('data/squad-v4.file')
+  lc.load_data('data/squad-v6.file')
   lc.train(split=0.8)
   lc.eval()

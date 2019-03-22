@@ -3,6 +3,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from data_processing import *
 from utils.stanford_corenlp import StanfordNLP
 from InferSent.models import InferSent
+from gensim.models import KeyedVectors
 import torch
 from nltk import Tree
 import numpy as np
@@ -10,17 +11,17 @@ import os
 
 class ArticleVectorizer():
   def __init__(self):
-    self.n_dim = 9
+    self.n_dim = 4
     self.n_sentences = 0
     self.n_questions = 0
     self.vectors = np.array([])
     self.targets = np.array([])
     self.n_vectors = len(self.vectors)
-    self.load_w2v()
+    self.word2vec = KeyedVectors.load("data/wordvectors.kv", mmap='r')
 
-  def load_w2v(self):
-    with open("data/w2v.file", "rb") as f:
-      self.word2vec = pickle.load(f)
+  # def load_w2v(self):
+  #   with open("data/google-w2v.file", "rb") as f:
+  #     self.word2vec = pickle.load(f)
 
   def load_article(self, article):
     self.article = article
@@ -38,7 +39,7 @@ class ArticleVectorizer():
 
     self.add_cos_scores()
     self.add_matching_ngrams()
-    self.add_wh_type()
+    # self.add_wh_type()
     self.add_root_match()
     self.add_targets()
   
@@ -98,19 +99,16 @@ class ArticleVectorizer():
         v_idx += 1
 
   def root_match(self, tree_1, tokens_1, tree_2, tokens_2):
-    # word2vec blev denna verkligen bra. lemma?
-    # print(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
-    # print(self.word2vec.wv.similarity(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1]))
     try:
-      return self.word2vec_sim(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
+      return self.word_sim(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
     except IndexError:
       return 0
 
     # return tokens_1[tree_1[0][2]-1] == tokens_2[tree_2[0][2]-1]
 
-  def word2vec_sim(self, word_1, word_2):
+  def word_sim(self, word_1, word_2):
     try:
-      return self.word2vec.wv.similarity(word_1, word_2)
+      return self.word2vec.similarity(word_1, word_2)
     except KeyError:
       return 0
 
