@@ -49,7 +49,7 @@ class DataProcessor():
     }
 
   def read_squad(self):
-    with open("data/train-v2.0.json") as f:
+    with open("data/SQuAD/train-v2.0.json") as f:
       data = json.load(f)
 
     self.n_articles = 0
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
   dp = DataProcessor()
   # dp.read_squad()
-  dp.load('data/squad-v6.file')
+  dp.load('data/SQuAD/squad-v6.file')
 
   # DEBUG
   article = dp.articles[0]

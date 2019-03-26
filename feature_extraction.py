@@ -79,7 +79,7 @@ class Vectorizer():
 
 if __name__ == "__main__":
   dp = DataProcessor()
-  dp.load("data/squad-v6.file")
+  dp.load("data/SQuAD/squad-v6.file")
   
   vec = Vectorizer()
   vec.vectorize(dp.articles)

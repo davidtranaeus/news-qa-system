@@ -53,7 +53,7 @@ def w2v_sentence(wv, tokens):
 
 def question_analysis():
   dp = DataProcessor()
-  dp.load("data/squad-v6.file")
+  dp.load("data/SQuAD/squad-v6.file")
   ae = AnswerExtractor()
 
   q_types = {}

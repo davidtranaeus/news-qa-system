@@ -58,6 +58,6 @@ class LogisticClassifier():
 
 if __name__ == "__main__":
   lc = LogisticClassifier()
-  lc.load_data('data/squad-v6.file')
+  lc.load_data('data/SQuAD/squad-v6.file')
   lc.train(split=0.8)
   lc.eval()
