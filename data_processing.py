@@ -7,7 +7,6 @@ from nltk import sent_tokenize
 from nltk.util import bigrams
 #from nltk import pos_tag
 import os
-from InferSent.models import InferSent
 #from nltk import pos_tag
 
 class DataProcessor():
