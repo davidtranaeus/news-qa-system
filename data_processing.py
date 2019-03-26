@@ -3,13 +3,15 @@ import pickle
 import json
 from pprint import pprint
 from nltk import sent_tokenize
-#from nltk.tokenize import word_tokenize
 from nltk.util import bigrams
-#from nltk import pos_tag
 import os
-#from nltk import pos_tag
 
 class DataProcessor():
+
+  ### TODO
+  # - Systematic way to handle infersent scores
+  # - Build a stable set for train and dev files of SQuAD
+
   def __init__(self):
     self.sNLP = StanfordNLP()
 
@@ -33,17 +35,7 @@ class DataProcessor():
           self.articles[i]["sentences"][j]["cos_scores"].append(all_scores[i][k][j])
       
   def adjust_data(self):
-    # pass
-    print(self.n_articles)
-    for i in range(len(self.articles)):
-      if len(self.articles[i]["questions"]) == 0:
-        self.articles[i] = None
-
-    self.articles = [x for x in self.articles if x is not None]
-    print(len(self.articles))
-    for i in self.articles:
-      if len(i["questions"]) == 0:
-        print("Found article with 0 questions")
+    pass
 
   def create_features(self, text, other={}):
     tokens = self.sNLP.word_tokenize(text)
@@ -109,58 +101,8 @@ class DataProcessor():
           
         current_idx += 1
 
-    print(len(self.articles))
-    # self.articles = [art for art in self.articles if len(art["questions"]) != 0]
-    print(len(self.articles))
-
-  def read_newsqa(self):
-    pass
-    # with open('data/combined-newsqa-data-v1.json') as f:
-    #   data = json.load(f)
-
-    # self.n_articles = len(data["data"])
-    # self.articles = [None for i in range(self.n_articles)]
-    
-    # print("Processing articles ({})".format(self.n_articles))
-    # for idx in range(self.n_articles):
-    # # for idx in range(1):
-    #   print("{} articles processed".format(idx))
-    #   self.articles[idx] = Article(data["data"][idx]["text"])
-
-    #   for q in data["data"][idx]["questions"]:
-    #     if not "s" in q["consensus"]:
-    #       continue
-
-    #     start = q["consensus"]["s"]
-    #     end = q["consensus"]["e"]
-    #     answer = data["data"][idx]["text"][start:end]
-    #     split = data["data"][idx]["text"].split("\n")
-        
-    #     splitted = [sent_tokenize(i) for i in split]
-    #     # print(splitted)
-    #     answer_sentence = None
-    #     total_len = 0
-    #     c = 0
-    #     for i in splitted:
-    #       if len(i) == 0:
-    #         total_len += 1
-    #       else:
-    #         for j in i:
-    #           if start >= total_len and end < total_len + len(j):
-    #             answer_sentence = c
-              
-    #           total_len += len(j)
-    #           c += 1
-              
-    #     if answer_sentence != None:
-    #       self.articles[idx].questions.append(Question(
-    #         q["consensus"],
-    #         q["q"],
-    #         answer,
-    #         answer_sentence
-    #       ))
-
-
+    # Remove articles which don't have any questions
+    self.articles = [art for art in self.articles if len(art["questions"]) != 0]
 
 if __name__ == "__main__":
 
