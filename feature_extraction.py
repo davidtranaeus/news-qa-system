@@ -53,6 +53,7 @@ class ArticleVectorizer():
           vec_idx += 1
   
   def ngram_match(self, ngrams_1, ngrams_2):
+    # return len(set(ngrams_1) & set(ngrams_2))
     tot = 0
     for i in ngrams_1:
       if i in ngrams_2:
@@ -60,6 +61,7 @@ class ArticleVectorizer():
     return tot
   
   def root_sim(self, text_1, text_2):
+    # TODO root for some question is the wh-word
     tokens_1, tree_1 = text_1["tokens"], text_1["dep_tree"]
     tokens_2, tree_2 = text_2["tokens"], text_2["dep_tree"]
 
@@ -69,21 +71,11 @@ class ArticleVectorizer():
       return 0
 
   def word_sim(self, word_1, word_2):
+    # TODO stemming?
     try:
       return self.word2vec.similarity(word_1, word_2)
     except KeyError:
       return 0
-
-  def add_targets(self):
-    v_idx = 0
-    for i in range(len(self.article["sentences"])):
-      for j in range(len(self.article["questions"])):
-        if self.article["questions"][j]["answer"]["answer_sent"] == i:
-          self.targets[v_idx] = 1
-        else:
-          self.targets[v_idx] = 0
-
-        v_idx += 1
 
 if __name__ == "__main__":
   dp = DataProcessor()
