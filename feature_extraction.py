@@ -11,59 +11,90 @@ import os
 
 class ArticleVectorizer():
   def __init__(self):
-    self.n_dim = 4
     self.n_sentences = 0
     self.n_questions = 0
-    self.vectors = np.array([])
-    self.targets = np.array([])
-    self.n_vectors = len(self.vectors)
+    self.vectors = []
+    self.targets = []
+    self.n_vectors = 0
     self.word2vec = KeyedVectors.load("data/wordvectors.kv", mmap='r')
+    self.n_features = 4
+    self.current_art_idx = 0
+    self.f_idxs = {
+      "cos": 0,
+      "unigram": 1,
+      "bigram": 2,
+      "root_sim": 3
+    }
 
-  # def load_w2v(self):
-  #   with open("data/google-w2v.file", "rb") as f:
-  #     self.word2vec = pickle.load(f)
+  def load_articles(self, articles):
+    self.articles = articles
+    self.n_articles = len(self.articles)
 
-  def load_article(self, article):
-    self.article = article
-    self.n_sentences = len(article["sentences"])
-    self.n_questions = len(article["questions"])
+    for art in dp.articles:
+      self.n_sentences += len(art["sentences"])
+      self.n_questions += len(art["questions"])
+
+    self.n_vectors = self.n_sentences * self.n_questions
   
   def create_vectors(self):
-    self.n_vectors = self.n_sentences*self.n_questions
-    self.vectors = np.zeros((self.n_vectors, self.n_dim))
+    self.vectors = np.zeros((self.n_vectors, self.n_features))
     self.targets = np.zeros(self.n_vectors)
-    # print(self.n_vectors)
-    # print(self.n_sentences)
-    # print(self.n_questions)
-    # print("\n")
+    
+    # self.add_cos_scores()
+    # self.add_matching_ngrams()
+    # self.add_root_sim()
+    # self.add_targets()
 
-    self.add_cos_scores()
-    self.add_matching_ngrams()
-    # self.add_wh_type()
-    self.add_root_match()
-    self.add_targets()
+    vec_idx = 0
+
+    for art in self.articles:
+      for sent in art["sentences"]:
+        for q_idx, question in enumerate(art["questions"]):
+          
+          # Cos scores
+          self.vectors[vec_idx, self.f_idxs["cos"]] = sent["cos_scores"][q_idx]
+
+          # n-grams
+          self.vectors[vec_idx, self.f_idxs["unigram"]] = self.matching_ngrams(
+            sent["tokens"], question["question"]["tokens"]
+          )
+
+          self.vectors[vec_idx, self.f_idxs["bigram"]] = self.matching_ngrams(
+            sent["bigrams"], question["question"]["bigrams"]
+          )
+
+          # root sim
+          self.vectors[vec_idx, self.f_idxs["root_sim"]] = self.root_sim(
+            sent, question["question"]
+          )
+
+          vec_idx += 1
+
   
-  def add_cos_scores(self):
-    #print(self.article["sentences"][0]["cos_scores"])
-    v_idx = 0
-    for i in range(len(self.article["sentences"])):
-      for j in range(len(self.article["sentences"][i]["cos_scores"])):
-        self.vectors[v_idx,0] = self.article["sentences"][i]["cos_scores"][j]
-        v_idx += 1
-  
-  def add_matching_ngrams(self):
-    v_idx = 0
-    for i in range(len(self.article["sentences"])):
-      for j in range(len(self.article["questions"])):
-        self.vectors[v_idx,1] = self.matching_ngrams(
-          self.article["sentences"][i]["tokens"],
-          self.article["questions"][j]["question"]["tokens"]
-        )
-        self.vectors[v_idx,2] = self.matching_ngrams(
-          self.article["sentences"][i]["bigrams"],
-          self.article["questions"][j]["question"]["bigrams"]
-        )
-        v_idx += 1
+  # def add_cos_scores(self):
+  #   vec_idx = 0
+
+  #   for art in self.articles:
+  #     for sent in art["sentences"]:
+  #       for cos_score in sent["cos_scores"]:
+  #         self.vectors[vec_idx, self.f_idxs["cos"]] = cos_score
+  #         vec_idx += 1
+
+  # def add_matching_ngrams(self):
+  #   vec_idx = 0
+
+  #   for art in self.articles:
+  #     for sent in art["sentences"]:
+  #       for question in art["questions"]:
+
+  #         self.vectors[vec_idx, self.f_idxs["unigram"]] = self.matching_ngrams(
+  #           sent["tokens"], question["question"]["tokens"]
+  #         )
+
+  #         self.vectors[vec_idx, self.f_idxs["bigram"]] = self.matching_ngrams(
+  #           sent["bigrams"], question["question"]["bigrams"]
+  #         )
+  #         vec_idx += 1
 
   def matching_ngrams(self, ngrams_1, ngrams_2):
     tot = 0
@@ -72,39 +103,24 @@ class ArticleVectorizer():
         tot += 1
     return tot
   
-  def add_wh_type(self): # varför har jag denna?
-    for i in range(len(self.article["questions"])):
-      wh_type = self.wh_type(self.article["questions"][i]["question"]["pos_tags"])
-      idxs = list(range(i, self.n_vectors, self.n_questions))
-      self.vectors[idxs, 4+wh_type] = 1
+  # def add_root_sim(self):
+  #   vec_idx = 0
 
-  def wh_type(self, pos_tags):
-    for tag in pos_tags:
-      try:
-        return ['WRB', 'WP', 'WDT', 'WP$'].index(tag[1])
-      except ValueError:
-        continue
-    return 4
+  #   for art in self.articles:
+  #     for sent in art["sentences"]:
+  #       for question in art["questions"]:
+  #         self.vectors[vec_idx, self.f_idxs["root_sim"]] = self.root_sim(
+  #           sent, question
+  #         )
 
-  def add_root_match(self):
-    v_idx = 0
-    for i in range(len(self.article["sentences"])):
-      for j in range(len(self.article["questions"])):
-        self.vectors[v_idx,3] = self.root_match(
-          self.article["sentences"][i]["dep_tree"],
-          self.article["sentences"][i]["tokens"],
-          self.article["questions"][j]["question"]["dep_tree"],
-          self.article["questions"][j]["question"]["tokens"]
-        )
-        v_idx += 1
+  def root_sim(self, text_1, text_2):
+    tokens_1, tree_1 = text_1["tokens"], text_1["dep_tree"]
+    tokens_2, tree_2 = text_2["tokens"], text_2["dep_tree"]
 
-  def root_match(self, tree_1, tokens_1, tree_2, tokens_2):
     try:
       return self.word_sim(tokens_1[tree_1[0][2]-1], tokens_2[tree_2[0][2]-1])
     except IndexError:
       return 0
-
-    # return tokens_1[tree_1[0][2]-1] == tokens_2[tree_2[0][2]-1]
 
   def word_sim(self, word_1, word_2):
     try:
@@ -115,7 +131,7 @@ class ArticleVectorizer():
   def add_targets(self):
     v_idx = 0
     for i in range(len(self.article["sentences"])):
-      for j in range(len(self.article["sentences"][i]["cos_scores"])):
+      for j in range(len(self.article["questions"])):
         if self.article["questions"][j]["answer"]["answer_sent"] == i:
           self.targets[v_idx] = 1
         else:
@@ -123,14 +139,25 @@ class ArticleVectorizer():
 
         v_idx += 1
 
-
 if __name__ == "__main__":
   dp = DataProcessor()
-  dp.load("data/squad-v4.file")
+  dp.load("data/squad-v6.file")
   
-  av = ArticleVectorizer()
-  av.load_article(dp.articles[0])
-  av.create_vectors()
+  # av = ArticleVectorizer()
+  # av.load_articles(dp.articles)
+  # av.create_vectors()
+
+  # print(len(dp.articles[0]["sentences"]))
+  # print(len(dp.articles[0]["questions"]))
+  # print('---')
+
+  # pprint(dp.articles[0]["sentences"][0]["dep_tree"])
+  # print(dp.articles[0]["sentences"][0]["tokens"])
+  # pprint(dp.articles[0]["questions"][5]["question"]["dep_tree"])
+  # print(dp.articles[0]["questions"][5]["question"]["tokens"])
+
+  # pprint(dp.articles[0]["questions"][3]["question"]["tokens"])
+  # print(av.vectors[:20])
 
 
 
