@@ -20,7 +20,8 @@ from nltk import pos_tag
 from gensim.models import KeyedVectors
 import time
 from collections import Counter
-from answer_extraction import *
+
+from nltk.corpus import stopwords
 
 # tv = TfidfVectorizer()
 # self.tfidf_mat = tv.fit_transform([i.raw_article_text for i in self.articles]).toarray() # (n documents, n unique tokens)
@@ -51,24 +52,6 @@ def w2v_sentence(wv, tokens):
 
 
 
-def question_analysis():
-  dp = DataProcessor()
-  dp.load("data/SQuAD/squad-v6.file")
-  ae = AnswerExtractor()
-
-  q_types = {}
-  for a_idx, art in enumerate(dp.articles):
-    print("A_IDX", a_idx)
-    for q_idx, question in enumerate(art["questions"]):
-      q_type = ae.get_wh_type(question["question"])
-
-      if q_type != None and q_type[0].lower() == "how":
-        print("Q_IDX", q_idx)
-        print(question["question"]["text"])
-
-
-
-
 if __name__ == '__main__':
-  question_analysis()
-  pass
+  stop = stopwords.words("english")
+  print(stop)

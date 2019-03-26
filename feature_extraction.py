@@ -1,5 +1,6 @@
 from data_processing import *
 from gensim.models import KeyedVectors
+from nltk.corpus import stopwords
 import numpy as np
 
 class Vectorizer():
@@ -14,6 +15,7 @@ class Vectorizer():
       "bigram": 2,
       "root_sim": 3
     }
+    self.stopwords = stopwords.words("english")
 
   def vectorize(self, articles):
     self.articles = articles
@@ -54,7 +56,17 @@ class Vectorizer():
   
   def ngram_match(self, ngrams_1, ngrams_2):
     # TODO stop list
-    return len(set(ngrams_1) & set(ngrams_2))
+    matches = set(ngrams_1) & set(ngrams_2)
+
+    try: # TODO vad händer här egentligen?? weights blir negativa men precision ökar med 0.07?
+      if isinstance(ngrams_1[0], tuple):
+        return len([match for match in matches if not any(token in self.stopwords for token in match)])
+      else:
+        return len([match for match in matches if match not in self.stopwords])
+    except IndexError:
+      return 0
+
+    # return len(set(ngrams_1) & set(ngrams_2))
   
   def root_sim(self, text_1, text_2):
     # TODO root for some question is the wh-word
