@@ -2,7 +2,7 @@ from data_processing import *
 from gensim.models import KeyedVectors
 import numpy as np
 
-class ArticleVectorizer():
+class Vectorizer():
   def __init__(self):
     self.vectors = []
     self.targets = []
@@ -81,8 +81,8 @@ if __name__ == "__main__":
   dp = DataProcessor()
   dp.load("data/squad-v6.file")
   
-  av = ArticleVectorizer()
-  av.vectorize(dp.articles)
+  vec = Vectorizer()
+  vec.vectorize(dp.articles)
 
 
 
