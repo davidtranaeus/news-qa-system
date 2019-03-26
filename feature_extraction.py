@@ -7,7 +7,7 @@ class Vectorizer():
     self.vectors = []
     self.targets = []
     self.n_vectors = 0
-    self.word2vec = KeyedVectors.load("data/wordvectors.kv", mmap='r')
+    self.word2vec = KeyedVectors.load("data/google-word2vec/wordvectors.kv", mmap='r')
     self.f_idxs = {
       "cos": 0,
       "unigram": 1,
@@ -18,7 +18,7 @@ class Vectorizer():
   def vectorize(self, articles):
     self.articles = articles
 
-    for art in dp.articles:
+    for art in self.articles:
       self.n_vectors += len(art["sentences"]) * len(art["questions"])
 
     self.vectors = np.zeros((self.n_vectors, len(self.f_idxs)))
@@ -53,12 +53,8 @@ class Vectorizer():
           vec_idx += 1
   
   def ngram_match(self, ngrams_1, ngrams_2):
-    # return len(set(ngrams_1) & set(ngrams_2))
-    tot = 0
-    for i in ngrams_1:
-      if i in ngrams_2:
-        tot += 1
-    return tot
+    # TODO stop list
+    return len(set(ngrams_1) & set(ngrams_2))
   
   def root_sim(self, text_1, text_2):
     # TODO root for some question is the wh-word
