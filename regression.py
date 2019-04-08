@@ -14,7 +14,7 @@ class RegressionModel():
     self.dp = DataProcessor()
     self.vec = Vectorizer()
     self.n_vectors = 0
-    self.model = LogisticRegression(solver="lbfgs")
+    self.model = LogisticRegression(solver='lbfgs')
     # self.clf = SGDClassifier(loss='log')
 
   def load(self, path):

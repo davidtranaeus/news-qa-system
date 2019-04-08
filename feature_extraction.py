@@ -2,6 +2,8 @@ from data_processing import *
 from gensim.models import KeyedVectors
 from nltk.corpus import stopwords
 import numpy as np
+import nltk
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 class Vectorizer():
   def __init__(self):
@@ -13,9 +15,12 @@ class Vectorizer():
       "cos": 0,
       "unigram": 1,
       "bigram": 2,
-      "root_sim": 3
+      "root_sim": 3,
+      "sentiment": 4
     }
     self.stopwords = stopwords.words("english")
+    self.lemma = nltk.wordnet.WordNetLemmatizer()
+    self.sentiment = SentimentIntensityAnalyzer()
 
   def vectorize(self, articles):
     self.articles = articles
@@ -28,9 +33,11 @@ class Vectorizer():
     
     vec_idx = 0
 
-    for art in self.articles:
+    for a_idx, art in enumerate(self.articles):
       for s_idx, sent in enumerate(art["sentences"]):
         for q_idx, question in enumerate(art["questions"]):
+
+          # print(a_idx)
           
           # cos scores
           self.vectors[vec_idx, self.f_idxs["cos"]] = sent["cos_scores"][q_idx]
@@ -47,6 +54,11 @@ class Vectorizer():
           # root sim
           self.vectors[vec_idx, self.f_idxs["root_sim"]] = self.root_sim(
             sent, question["question"]
+          )
+
+          # sentiment
+          self.vectors[vec_idx, self.f_idxs["sentiment"]] = self.sent_sim(
+            sent["text"], question["question"]["text"]
           )
 
           # target variable
@@ -67,7 +79,7 @@ class Vectorizer():
       return 0
 
     # return len(set(ngrams_1) & set(ngrams_2))
-  
+
   def root_sim(self, text_1, text_2):
     # TODO root for some question is the wh-word
     tokens_1, tree_1 = text_1["tokens"], text_1["dep_tree"]
@@ -80,10 +92,15 @@ class Vectorizer():
 
   def word_sim(self, word_1, word_2):
     # TODO stemming?
+
     try:
       return self.word2vec.similarity(word_1, word_2)
     except KeyError:
       return 0
+
+  def sent_sim(self, text_1, text_2):
+    return abs(self.sentiment.polarity_scores(text_1)["compound"] - \
+      self.sentiment.polarity_scores(text_2)["compound"])
 
 if __name__ == "__main__":
   dp = DataProcessor()
