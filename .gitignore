@@ -4,3 +4,4 @@ __pycache__
 InferSent/
 old/
 playground.py
+w2v_test.py
