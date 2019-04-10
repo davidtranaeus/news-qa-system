@@ -16,7 +16,10 @@ class Vectorizer():
       "unigram": 1,
       "bigram": 2,
       "root_sim": 3,
-      "sentiment": 4
+      "sent_comp": 4,
+      "sent_neg": 5,
+      "sent_neu": 6,
+      "sent_pos": 7
     }
     self.stopwords = stopwords.words("english")
     self.lemma = nltk.wordnet.WordNetLemmatizer()
@@ -57,8 +60,24 @@ class Vectorizer():
           )
 
           # sentiment
-          self.vectors[vec_idx, self.f_idxs["sentiment"]] = self.sent_sim(
-            sent["text"], question["question"]["text"]
+          self.vectors[vec_idx, self.f_idxs["sent_comp"]] = self.sent_sim(
+            sent["sentiment"]["compound"], 
+            question["question"]["sentiment"]["compound"]
+          )
+
+          self.vectors[vec_idx, self.f_idxs["sent_neg"]] = self.sent_sim(
+            sent["sentiment"]["neg"], 
+            question["question"]["sentiment"]["neg"]
+          )
+
+          self.vectors[vec_idx, self.f_idxs["sent_neu"]] = self.sent_sim(
+            sent["sentiment"]["neu"], 
+            question["question"]["sentiment"]["neu"]
+          )
+
+          self.vectors[vec_idx, self.f_idxs["sent_pos"]] = self.sent_sim(
+            sent["sentiment"]["pos"], 
+            question["question"]["sentiment"]["pos"]
           )
 
           # target variable
@@ -98,13 +117,12 @@ class Vectorizer():
     except KeyError:
       return 0
 
-  def sent_sim(self, text_1, text_2):
-    return abs(self.sentiment.polarity_scores(text_1)["compound"] - \
-      self.sentiment.polarity_scores(text_2)["compound"])
+  def sent_sim(self, sent_1, sent_2):
+    return abs(sent_1 - sent_2)
 
 if __name__ == "__main__":
   dp = DataProcessor()
-  dp.load("data/SQuAD/squad-v6.file")
+  dp.load("data/SQuAD/squad-v7.file")
   
   vec = Vectorizer()
   vec.vectorize(dp.articles)

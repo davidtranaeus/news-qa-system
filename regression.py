@@ -1,11 +1,13 @@
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import SGDClassifier
+from sklearn.neural_network import MLPClassifier
 import numpy as np
 from data_processing import *
 from feature_extraction import *
 import random
 from pprint import pprint
 from sklearn.metrics import confusion_matrix
+from time import time
 
 random.seed(100)
 
@@ -15,7 +17,9 @@ class RegressionModel():
     self.vec = Vectorizer()
     self.n_vectors = 0
     self.model = LogisticRegression(solver='lbfgs')
-    # self.clf = SGDClassifier(loss='log')
+    # self.model = MLPClassifier(hidden_layer_sizes=(100,50,30))
+    # self.model = SGDClassifier(loss='log')
+
 
   def load(self, path):
     self.dp.load(path)
@@ -28,10 +32,12 @@ class RegressionModel():
     self.set_train_test(split)
 
     print("Training")
+    start = time()
     self.model.fit(
       self.vectors[self.train_range],
       self.targets[self.train_range]
     )
+    print("Total time:", time()-start, "\n")
 
   def set_train_test(self, split):
     total_range = list(range(self.n_vectors))
@@ -58,12 +64,12 @@ class RegressionModel():
     print("Precision:", precision)
     print("Recall:", recall)
     print("F1:", 2 * (precision * recall) / (precision + recall))
-    print("Coef:", self.model.coef_)
+    # print("Coef:", self.model.coef_)
     print("n iterations:", self.model.n_iter_)
 
 
 if __name__ == "__main__":
   rm = RegressionModel()
-  rm.load('data/SQuAD/squad-v6.file')
+  rm.load('data/SQuAD/squad-v7.file')
   rm.train()
   rm.eval()

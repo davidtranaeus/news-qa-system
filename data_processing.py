@@ -5,6 +5,7 @@ from pprint import pprint
 from nltk import sent_tokenize
 from nltk.util import bigrams
 import os
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 class DataProcessor():
 
@@ -14,15 +15,18 @@ class DataProcessor():
 
   def __init__(self):
     self.sNLP = StanfordNLP()
+    self.sentAnalyzer = SentimentIntensityAnalyzer()
 
   def save(self, path):
     with open(path, "wb") as f:
       pickle.dump(self.articles, f, pickle.HIGHEST_PROTOCOL)
 
   def load(self, path):
+    print("Loading articles")
     with open(path, "rb") as f:
       self.articles = pickle.load(f)
       self.n_articles = len(self.articles)
+    print("Done\n")
   
   def add_cosine_scores(self, path="data/cosine_scores.file"):
     with open(path, "rb") as f:
@@ -35,7 +39,20 @@ class DataProcessor():
           self.articles[i]["sentences"][j]["cos_scores"].append(all_scores[i][k][j])
       
   def adjust_data(self):
-    pass
+ 
+    for art_idx, art in enumerate(self.articles):
+
+      for sent_idx, sent in enumerate(art["sentences"]):
+        self.articles[art_idx]["sentences"][sent_idx]["sentiment"] = self.sentAnalyzer.polarity_scores(
+          sent["text"]
+        )
+      
+      for q_idx, quest in enumerate(art["questions"]):
+        self.articles[art_idx]["questions"][q_idx]["question"]["sentiment"] = self.sentAnalyzer.polarity_scores(
+          quest["question"]["text"]
+        )
+
+
 
   def create_features(self, text, other={}):
     tokens = self.sNLP.word_tokenize(text)
@@ -45,6 +62,7 @@ class DataProcessor():
       "bigrams": list(bigrams(tokens)),
       "pos_tags": self.sNLP.pos(text),
       "dep_tree": self.sNLP.dependency_parse(text),
+      "sentiment": self.sentAnalyzer.polarity_scores(text),
       **other 
     }
 
@@ -108,10 +126,12 @@ if __name__ == "__main__":
 
   dp = DataProcessor()
   # dp.read_squad()
-  dp.load('data/SQuAD/squad-v6.file')
+  dp.load('data/SQuAD/squad-v7.file')
+  # dp.adjust_data()
+  # dp.save('data/SQuAD/squad-v7.file')
 
   # DEBUG
-  article = dp.articles[0]
+  article = dp.articles[1]
   pprint(article)
   for i,j in enumerate(article["sentences"]):
     print(i, j["text"])
