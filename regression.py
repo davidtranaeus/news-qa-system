@@ -7,7 +7,11 @@ from feature_extraction import *
 import random
 from pprint import pprint
 from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from time import time
+import matplotlib.pyplot as plt
+import numpy as np
 
 random.seed(100)
 
@@ -17,6 +21,8 @@ class RegressionModel():
     self.vec = Vectorizer()
     self.n_vectors = 0
     self.model = LogisticRegression(solver='lbfgs')
+    # self.scaler = MinMaxScaler()
+    self.scaler = StandardScaler()
     # self.model = MLPClassifier(hidden_layer_sizes=(100,50,30))
     # self.model = SGDClassifier(loss='log')
 
@@ -30,6 +36,7 @@ class RegressionModel():
 
   def train(self, split=0.8):
     self.set_train_test(split)
+    self.normalize()
 
     print("Training")
     start = time()
@@ -44,6 +51,18 @@ class RegressionModel():
     random.shuffle(total_range)
     split_idx = round(len(total_range) * split)
     self.train_range, self.test_range = total_range[:split_idx], total_range[split_idx:]
+  
+  def normalize(self):
+    # plt.plot(self.vectors[:,1])
+    # plt.show()
+    # unique, counts = numpy.unique(self.vectors[:,1], return_counts=True)
+    # print(dict(zip(unique, counts)))
+    # print(np.max(self.vectors, axis=0))
+    self.scaler.fit(self.vectors[self.train_range])
+    self.vectors = self.scaler.transform(self.vectors)
+    # print(np.max(self.vectors, axis=0))
+
+    
 
   def eval(self):
     print("Model score:", self.model.score(
@@ -56,6 +75,8 @@ class RegressionModel():
       self.targets[self.test_range]
     )
 
+    # tn fp
+    # fn tp
     tn, fp, fn, tp = conf_matrix.ravel()
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
@@ -64,7 +85,7 @@ class RegressionModel():
     print("Precision:", precision)
     print("Recall:", recall)
     print("F1:", 2 * (precision * recall) / (precision + recall))
-    # print("Coef:", self.model.coef_)
+    print("Coef:", self.model.coef_)
     print("n iterations:", self.model.n_iter_)
 
 
