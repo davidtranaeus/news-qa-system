@@ -32,6 +32,7 @@ class Vectorizer():
       self.n_vectors += len(art["sentences"]) * len(art["questions"])
 
     self.vectors = np.zeros((self.n_vectors, len(self.f_idxs)))
+    self.vector_ids = np.zeros((self.n_vectors, 2))
     self.targets = np.zeros(self.n_vectors)
     
     vec_idx = 0
@@ -82,6 +83,8 @@ class Vectorizer():
 
           # target variable
           self.targets[vec_idx] = 1 if question["answer"]["answer_sent"] == s_idx else 0
+
+          self.vector_ids[vec_idx] = [a_idx, q_idx]
 
           vec_idx += 1
   

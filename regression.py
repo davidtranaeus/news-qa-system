@@ -19,20 +19,16 @@ class RegressionModel():
   def __init__(self):
     self.dp = DataProcessor()
     self.vec = Vectorizer()
-    self.n_vectors = 0
     self.model = LogisticRegression(solver='lbfgs')
-    # self.scaler = MinMaxScaler()
     self.scaler = StandardScaler()
-    # self.model = MLPClassifier(hidden_layer_sizes=(100,50,30))
-    # self.model = SGDClassifier(loss='log')
 
 
   def load(self, path):
     self.dp.load(path)
     self.vec.vectorize(self.dp.articles)
     self.vectors = self.vec.vectors
-    self.n_vectors = len(self.vectors)
     self.targets = self.vec.targets
+    self.vector_ids = self.vec.vector_ids
 
   def train(self, split=0.8):
     self.set_train_test(split)
@@ -41,38 +37,37 @@ class RegressionModel():
     print("Training")
     start = time()
     self.model.fit(
-      self.vectors[self.train_range],
-      self.targets[self.train_range]
+      self.train_vectors,
+      self.train_targets
     )
     print("Total time:", time()-start, "\n")
 
   def set_train_test(self, split):
-    total_range = list(range(self.n_vectors))
+    total_range = list(range(len(self.vec.articles)))
     random.shuffle(total_range)
     split_idx = round(len(total_range) * split)
     self.train_range, self.test_range = total_range[:split_idx], total_range[split_idx:]
+
+    self.train_vectors = self.vectors[np.in1d(self.vector_ids[:,0], self.train_range)]
+    self.train_targets = self.targets[np.in1d(self.vector_ids[:,0], self.train_range)]
+
+    self.test_vectors = self.vectors[np.in1d(self.vector_ids[:,0], self.test_range)]
+    self.test_targets = self.targets[np.in1d(self.vector_ids[:,0], self.test_range)]
   
   def normalize(self):
-    # plt.plot(self.vectors[:,1])
-    # plt.show()
-    # unique, counts = numpy.unique(self.vectors[:,1], return_counts=True)
-    # print(dict(zip(unique, counts)))
-    # print(np.max(self.vectors, axis=0))
-    self.scaler.fit(self.vectors[self.train_range])
-    self.vectors = self.scaler.transform(self.vectors)
-    # print(np.max(self.vectors, axis=0))
-
-    
+    self.train_vectors = self.scaler.fit_transform(self.train_vectors)
+    self.test_vectors = self.scaler.transform(self.test_vectors)
+    self.normed_vectors = self.scaler.transform(self.vectors)
 
   def eval(self):
     print("Model score:", self.model.score(
-      self.vectors[self.test_range],
-      self.targets[self.test_range]
+      self.test_vectors,
+      self.test_targets
     ))
 
     conf_matrix = confusion_matrix(
-      self.model.predict(self.vectors[self.test_range]),
-      self.targets[self.test_range]
+      self.model.predict(self.test_vectors),
+      self.test_targets
     )
 
     # tn fp
@@ -88,9 +83,31 @@ class RegressionModel():
     print("Coef:", self.model.coef_)
     print("n iterations:", self.model.n_iter_)
 
+  def eval_answer_ranking(self):
+    res = [0,0]
+
+    probs = self.model.predict_proba(self.normed_vectors)
+
+    for a_idx in self.test_range:
+      
+      n_questions = int(max(self.vector_ids[np.where(self.vector_ids[:,0] == a_idx)][:,1]))
+      
+      for q_idx in range(n_questions):
+        vec_idxs = np.where(np.all(self.vector_ids == [a_idx, q_idx], axis=1))[0]
+        q_probs = probs[vec_idxs]
+        targets = self.targets[vec_idxs]
+
+        if np.argmax(q_probs[:,1]) == np.where(targets == 1)[0][0]:
+          res[0] += 1
+        else:
+          res[1] += 1
+
+    print(res) # [10481, 2990]
+        
 
 if __name__ == "__main__":
   rm = RegressionModel()
   rm.load('data/SQuAD/squad-v7.file')
   rm.train()
   rm.eval()
+  # rm.eval_answer_ranking()
