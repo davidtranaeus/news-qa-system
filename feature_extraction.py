@@ -6,27 +6,31 @@ import nltk
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 class Vectorizer():
-  def __init__(self):
+  def __init__(self, with_sentiment=True):
     self.vectors = []
     self.targets = []
     self.n_vectors = 0
     self.word2vec = KeyedVectors.load("data/google-word2vec/wordvectors.kv", mmap='r')
+    self.with_sentiment = with_sentiment
     self.f_idxs = {
       "cos": 0,
       "unigram": 1,
       "bigram": 2,
-      "root_sim": 3,
+      "root_sim": 3
+    }
+    self.f_idxs = {**self.f_idxs, **{
       "sent_comp": 4,
       "sent_neg": 5,
       "sent_neu": 6,
       "sent_pos": 7
-    }
+    }} if with_sentiment else self.f_idxs
     self.stopwords = stopwords.words("english")
-    self.lemma = nltk.wordnet.WordNetLemmatizer()
+    # self.lemma = nltk.wordnet.WordNetLemmatizer()
     self.sentiment = SentimentIntensityAnalyzer()
 
-  def vectorize(self, articles):
-    self.articles = articles
+  def vectorize(self, processed_articles):
+    print("Creating vectors.")
+    self.articles = processed_articles
 
     for art in self.articles:
       self.n_vectors += len(art["sentences"]) * len(art["questions"])
@@ -61,25 +65,27 @@ class Vectorizer():
           )
 
           # sentiment
-          self.vectors[vec_idx, self.f_idxs["sent_comp"]] = self.sent_sim(
-            sent["sentiment"]["compound"], 
-            question["question"]["sentiment"]["compound"]
-          )
+          if self.with_sentiment:
+            
+            self.vectors[vec_idx, self.f_idxs["sent_comp"]] = self.sent_sim(
+              sent["sentiment"]["compound"], 
+              question["question"]["sentiment"]["compound"]
+            )
 
-          self.vectors[vec_idx, self.f_idxs["sent_neg"]] = self.sent_sim(
-            sent["sentiment"]["neg"], 
-            question["question"]["sentiment"]["neg"]
-          )
+            self.vectors[vec_idx, self.f_idxs["sent_neg"]] = self.sent_sim(
+              sent["sentiment"]["neg"], 
+              question["question"]["sentiment"]["neg"]
+            )
 
-          self.vectors[vec_idx, self.f_idxs["sent_neu"]] = self.sent_sim(
-            sent["sentiment"]["neu"], 
-            question["question"]["sentiment"]["neu"]
-          )
+            self.vectors[vec_idx, self.f_idxs["sent_neu"]] = self.sent_sim(
+              sent["sentiment"]["neu"], 
+              question["question"]["sentiment"]["neu"]
+            )
 
-          self.vectors[vec_idx, self.f_idxs["sent_pos"]] = self.sent_sim(
-            sent["sentiment"]["pos"], 
-            question["question"]["sentiment"]["pos"]
-          )
+            self.vectors[vec_idx, self.f_idxs["sent_pos"]] = self.sent_sim(
+              sent["sentiment"]["pos"], 
+              question["question"]["sentiment"]["pos"]
+            )
 
           # target variable
           self.targets[vec_idx] = 1 if question["answer"]["answer_sent"] == s_idx else 0

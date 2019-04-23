@@ -22,11 +22,10 @@ class DataProcessor():
       pickle.dump(self.articles, f, pickle.HIGHEST_PROTOCOL)
 
   def load(self, path):
-    print("Loading articles")
+    print("Loading articles.")
     with open(path, "rb") as f:
       self.articles = pickle.load(f)
       self.n_articles = len(self.articles)
-    print("Done\n")
   
   def add_cosine_scores(self, path="data/cosine_scores.file"):
     with open(path, "rb") as f:
