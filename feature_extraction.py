@@ -95,16 +95,18 @@ class Vectorizer():
           vec_idx += 1
   
   def ngram_match(self, ngrams_1, ngrams_2):
-    # TODO stop list
-    matches = set(ngrams_1) & set(ngrams_2)
+    return len(set(ngrams_1) & set(ngrams_2))
+    # try:
+    #   if isinstance(ngrams_1[0], tuple):
+    #     for bigram in matches:
+    #       for token in bigram:
+    #         uncommon_matches
 
-    try:
-      if isinstance(ngrams_1[0], tuple):
-        return len([match for match in matches if not any(token in self.stopwords for token in match)])
-      else:
-        return len([match for match in matches if match not in self.stopwords])
-    except IndexError:
-      return 0
+    #     return len([match for match in matches if not any(token in self.stopwords for token in match)])
+    #   else:
+    #     return len([match for match in matches if match not in self.stopwords])
+    # except IndexError:
+    #   return 0
 
     # return len(set(ngrams_1) & set(ngrams_2))
 
