@@ -98,7 +98,7 @@ class Vectorizer():
     # TODO stop list
     matches = set(ngrams_1) & set(ngrams_2)
 
-    try: # TODO vad händer här egentligen?? weights blir negativa men precision ökar med 0.07?
+    try:
       if isinstance(ngrams_1[0], tuple):
         return len([match for match in matches if not any(token in self.stopwords for token in match)])
       else:

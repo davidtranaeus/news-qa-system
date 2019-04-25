@@ -58,7 +58,6 @@ class LogRegModel():
         **{i: True for i in self.test_range},
         **{str(i[0])+", "+str(i[1]): True for i in filter_test_ids}
       }
-
       test_idxs = np.zeros(len(self.vector_ids))
       for idx, v_id in enumerate(self.vector_ids):
         if idx in test_range and str(int(v_id[0]))+", "+str(int(v_id[1])) in test_range:

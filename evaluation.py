@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from pprint import pprint
 
 class Evaluator():
-
   def score(self, model):
     return model.model.score(
       model.test_vectors,
@@ -61,8 +60,6 @@ class Evaluator():
     plt.title('Receiver operating characteristic')
     plt.legend(loc="lower right")
 
-    ####################################
-
   def evaluate_model(self, model, save_path):
     with open(save_path + ".csv", "w") as f:
       f.write("{}\n".format(save_path))
@@ -80,6 +77,8 @@ class Evaluator():
       f.write("Coefficients\n")
       for c in self.coefficients(model)[0]:
         f.write("{},".format(c))
+
+  ####################################
 
   def compare_sentiment_with_baseline(self):
     path = "results/"
