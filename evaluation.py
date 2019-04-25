@@ -33,7 +33,7 @@ class Evaluator():
     plt.title('Receiver operating characteristic')
     plt.legend(loc="lower right")
 
-  def evaluate_k_fold(self, conf_matrices, coeffs, save_path):
+  def evaluate_k_fold(self, conf_matrices, coeffs, auc_scores, save_path):
     precisions = [self.precision(c) for c in conf_matrices]
     recalls = [self.recall(c) for c in conf_matrices]
     f1_scores = [self.f1_score(c) for c in conf_matrices]
@@ -52,6 +52,9 @@ class Evaluator():
     coeffs_avg = np.average(coeffs, axis=0)
     coeffs_std = np.std(coeffs, axis=0)
 
+    auc_avg = np.average(auc_scores)
+    auc_std = np.std(auc_scores)
+
     with open(save_path + ".csv", "w") as f:
       f.write("{}\n".format(save_path))
       f.write(",{},{},{}\n".format("Average", "Std", "Total"))
@@ -67,6 +70,9 @@ class Evaluator():
       for c_avg, c_std in zip(coeffs_avg, coeffs_std):
         f.write("{},{}\n".format(c_avg, c_std))
 
+      f.write("{},{},{}\n".format("AUC", "Average", "Std"))
+      f.write(",{},{}\n".format(auc_avg, auc_std))
+
   def compare_k_fold(self):
     path = "results/kfold_"
     dp = DataProcessor()
@@ -75,9 +81,18 @@ class Evaluator():
     model = LogRegModel()
     model.load_vectors(dp.articles)
     result = model.run_k_fold()
-    self.evaluate_k_fold(result["conf_matrices"], result["coefficients"], path + "sentiment_model")
+    self.evaluate_k_fold(
+      result["conf_matrices"], 
+      result["coefficients"],
+      result["roc_auc_scores"], 
+      path + "sentiment_model")
+
     result = model.run_k_fold(with_sentiment=False)
-    self.evaluate_k_fold(result["conf_matrices"], result["coefficients"], path + "baseline_model")
+    self.evaluate_k_fold(
+      result["conf_matrices"], 
+      result["coefficients"],
+      result["roc_auc_scores"], 
+      path + "baseline_model")
 
 
 

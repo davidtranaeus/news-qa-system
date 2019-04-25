@@ -33,7 +33,6 @@ class LogRegModel():
   def run_k_fold(self, with_sentiment=True):
     print("Running k-fold.")
     X = self.vectors if with_sentiment else self.vectors[:,:4]
-    print(X.shape)
     y = self.targets
     
     result = {
