@@ -4,6 +4,7 @@ from sklearn.metrics import confusion_matrix, roc_curve, roc_auc_score
 import matplotlib.pyplot as plt
 from pprint import pprint
 import numpy as np
+import matplotlib.patches as mpatches
 
 class Evaluator():
   def precision(self, conf_matrix):
@@ -32,6 +33,53 @@ class Evaluator():
     plt.ylabel('True Positive Rate')
     plt.title('Receiver operating characteristic')
     plt.legend(loc="lower right")
+
+  def plot_weights(self):
+    base_avg = []
+    base_std = []
+    with open("results/kfold_baseline_model.csv", 'r') as f:
+      for idx, row in enumerate(f.readlines()):
+        if idx in range(10,14):
+          vals = row.split(",")
+          base_avg.append(float(vals[0]))
+          base_std.append(float(vals[1]))
+
+    sent_avg = []
+    sent_std = []
+    with open("results/kfold_sentiment_model.csv", 'r') as f:
+      for idx, row in enumerate(f.readlines()):
+        if idx in range(10,18):
+          vals = row.split(",")
+          sent_avg.append(float(vals[0]))
+          sent_std.append(float(vals[1]))
+    
+    sent_x = list(range(1,9))
+    base_x = list(range(1,5))
+
+    plt.errorbar(
+      base_x, 
+      base_avg, 
+      base_std, 
+      linestyle='None', 
+      capsize=5,
+      ecolor='orange')
+    plt.errorbar(sent_x[:4], sent_avg[:4], sent_std[:4], linestyle='None', capsize=8, ecolor='dodgerblue')
+    blue_patch = mpatches.Patch(color='dodgerblue', label='Sentiment model')
+    ora_patch = mpatches.Patch(color='orange', label='Baseline model')
+    plt.legend(handles=[blue_patch, ora_patch])
+    plt.xlabel('Feature number')
+    plt.ylabel('Coefficient value')
+    plt.xticks([1,2,3,4], ["1", "2", "3", "4"])
+    plt.show()
+
+    plt.errorbar(sent_x[4:], sent_avg[4:], sent_std[4:], linestyle='None', capsize=5)
+    blue_patch = mpatches.Patch(color='dodgerblue', label='Sentiment model')
+    plt.legend(handles=[blue_patch])
+    plt.xlabel('Feature number')
+    plt.ylabel('Coefficient value')
+    plt.xticks([5,6,7,8], ["5", "6", "7", "8"])
+    plt.show()
+
 
   def evaluate_k_fold(self, conf_matrices, coeffs, auc_scores, save_path):
     precisions = [self.precision(c) for c in conf_matrices]
@@ -74,7 +122,7 @@ class Evaluator():
       f.write(",{},{}\n".format(auc_avg, auc_std))
 
   def compare_k_fold(self):
-    path = "results/kfold_"
+    path = "results/v_2_kfold_"
     dp = DataProcessor()
     dp.load('data/SQuAD/squad-v7.file')
 
@@ -98,5 +146,6 @@ class Evaluator():
 
 if __name__ == "__main__":
   ev = Evaluator()
-  ev.compare_k_fold()
+  # ev.compare_k_fold()
   # ev.compare_why_questions()
+  ev.plot_weights()
