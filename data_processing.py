@@ -54,6 +54,11 @@ class DataProcessor():
 
 
   def create_features(self, text, other={}):
+    return {
+      "text": text,
+      **other
+    }
+
     tokens = self.sNLP.word_tokenize(text)
     return {
       "text": text,
@@ -79,6 +84,9 @@ class DataProcessor():
 
     self.articles = [{} for i in range(self.n_articles)]
 
+    n_impossible = 0
+    n_questions = 0
+
     # for i in range(1):
       # subject = data["data"][i]
     for subject in data["data"]:
@@ -94,7 +102,9 @@ class DataProcessor():
 
         # Only include questions if the answer exists in a sentence
         for idx, question in enumerate(para["qas"]):
+          n_questions += 1
           if question["is_impossible"]:
+            n_impossible += 1
             continue
           
           answer_sent = None
@@ -120,22 +130,41 @@ class DataProcessor():
 
     # Remove articles which don't have any questions
     self.articles = [art for art in self.articles if len(art["questions"]) != 0]
+    print(n_impossible)
+    print(n_questions)
 
 if __name__ == "__main__":
 
   dp = DataProcessor()
-  # dp.read_squad()
-  dp.load('data/SQuAD/squad-v7.file')
+  dp.read_squad()
+  # dp.load('data/SQuAD/squad-v7.file')
   # dp.adjust_data()
   # dp.save('data/SQuAD/squad-v7.file')
 
   # DEBUG
+  # article = dp.articles[1]
+  # pprint(article)
+  # for i,j in enumerate(article["sentences"]):
+  #   print(i, j["text"])
+  # for q in article["questions"]:
+  #   print(q["question"]["text"])
+  #   print(q["answer"]["answer_sent"], q["answer"]["text"])
+
+
   article = dp.articles[1]
-  pprint(article)
-  for i,j in enumerate(article["sentences"]):
-    print(i, j["text"])
-  for q in article["questions"]:
-    print(q["question"]["text"])
-    print(q["answer"]["answer_sent"], q["answer"]["text"])
+  n_questions = 0
+  n_errors = 0
+  for article in dp.articles:
+    # for sent_idx, sent in enumerate(article["sentences"]):
+    #   print(sent_idx, sent["text"])
+    for question in article["questions"]:
+      n_questions += 1
+      a_sent_idx = question["answer"]["answer_sent"]
+      if question["answer"]["text"] not in article["sentences"][a_sent_idx]["text"]:
+        n_errors += 1
+        print(question["answer"]["text"])
+        print(article["sentences"][a_sent_idx]["text"])
+        print("---")
 
-
+  print(n_questions)
+  print(n_errors)

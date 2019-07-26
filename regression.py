@@ -22,7 +22,12 @@ class LogRegModel():
     self.vec.vectorize(processed_articles)
     self.vectors = self.vec.vectors
     self.targets = self.vec.targets
-    self.vector_ids = self.vec.vector_ids
+    self.create_new_folds(n_folds)
+    # self.vector_ids = self.vec.vector_ids
+    # kf = KFold(n_splits=n_folds, shuffle=True)
+    # self.folds = list(kf.split(self.vectors))
+
+  def create_new_folds(self, n_folds=10):
     kf = KFold(n_splits=n_folds, shuffle=True)
     self.folds = list(kf.split(self.vectors))
 

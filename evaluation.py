@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from pprint import pprint
 import numpy as np
 import matplotlib.patches as mpatches
+import pickle
 
 class Evaluator():
   def precision(self, conf_matrix):
@@ -22,130 +23,204 @@ class Evaluator():
     r = self.recall(confusion_matrix)
     return (2 * p * r) / (p + r)
 
-  def plot_roc(self, roc_curve, logit_roc_auc, model_name):
-    plt.plot(roc_curve[0], roc_curve[1], label='{} (area = {:.4f})'.format(model_name, logit_roc_auc))
-    plt.plot([0,1], [0,1],'r--')
-
-  def roc_labels(self):
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver operating characteristic')
-    plt.legend(loc="lower right")
-
-  def plot_weights(self):
-    base_avg = []
-    base_std = []
-    with open("results/kfold_baseline_model.csv", 'r') as f:
-      for idx, row in enumerate(f.readlines()):
-        if idx in range(10,14):
-          vals = row.split(",")
-          base_avg.append(float(vals[0]))
-          base_std.append(float(vals[1]))
-
-    sent_avg = []
-    sent_std = []
-    with open("results/kfold_sentiment_model.csv", 'r') as f:
-      for idx, row in enumerate(f.readlines()):
-        if idx in range(10,18):
-          vals = row.split(",")
-          sent_avg.append(float(vals[0]))
-          sent_std.append(float(vals[1]))
+  def run_k_folds(self, n_runs=5, n_folds=2):
+    dp = DataProcessor()
+    dp.load('data/SQuAD/squad-v7.file')
+    model = LogRegModel()
+    model.load_vectors(dp.articles, n_folds=n_folds)
     
-    sent_x = list(range(1,9))
-    base_x = list(range(1,5))
+    baseline_results = []
+    sentiment_results = []
 
-    plt.errorbar(
-      base_x, 
-      base_avg, 
-      base_std, 
-      linestyle='None', 
-      capsize=5,
-      ecolor='orange')
-    plt.errorbar(sent_x[:4], sent_avg[:4], sent_std[:4], linestyle='None', capsize=8, ecolor='dodgerblue')
-    blue_patch = mpatches.Patch(color='dodgerblue', label='Sentiment model')
-    ora_patch = mpatches.Patch(color='orange', label='Baseline model')
-    plt.legend(handles=[blue_patch, ora_patch])
-    plt.xlabel('Feature number')
-    plt.ylabel('Coefficient value')
-    plt.xticks([1,2,3,4], ["1", "2", "3", "4"])
-    plt.show()
+    for run in range(n_runs):
+      print("k-fold run:", run)
+      baseline_results.append(model.run_k_fold(with_sentiment=False))
+      sentiment_results.append(model.run_k_fold())
+      model.create_new_folds(n_folds=n_folds)
 
-    plt.errorbar(sent_x[4:], sent_avg[4:], sent_std[4:], linestyle='None', capsize=5)
-    blue_patch = mpatches.Patch(color='dodgerblue', label='Sentiment model')
-    plt.legend(handles=[blue_patch])
-    plt.xlabel('Feature number')
-    plt.ylabel('Coefficient value')
-    plt.xticks([5,6,7,8], ["5", "6", "7", "8"])
-    plt.show()
+    self.save_results(baseline_results, "results/5x2_baseline")
+    self.save_results(sentiment_results, "results/5x2_sentiment")
 
+  def run_5x2cv_paired_t_tests(self):
+    baseline_results = self.load_results("results/5x2_baseline")
+    sentiment_results = self.load_results("results/5x2_sentiment")
 
-  def evaluate_k_fold(self, conf_matrices, coeffs, auc_scores, save_path):
-    precisions = [self.precision(c) for c in conf_matrices]
-    recalls = [self.recall(c) for c in conf_matrices]
-    f1_scores = [self.f1_score(c) for c in conf_matrices]
+    variances = {
+      "precision": [],
+      "recall": [],
+      "f1": []
+    }
+
+    metrics = list(variances.keys())
+
+    functions = [
+      self.precision,
+      self.recall,
+      self.f1_score
+    ]
+
+    ts = []
+
+    for i in range(5):
+      for f, met in zip(functions, metrics):
+        # performance diff set 1 
+        p1 = f(baseline_results[i]["conf_matrices"][0]) - f(sentiment_results[i]["conf_matrices"][0])
+
+        # performance diff set 2
+        p2 = f(baseline_results[i]["conf_matrices"][1]) - f(sentiment_results[i]["conf_matrices"][1])
+
+        # diff mean
+        mean = (p1 + p2) / 2
+        
+        # diff variance
+        variances[met].append(np.square(p1 - mean) + np.square(p2 - mean))
+
+    for i in range(len(metrics)):
+      # first diff mean
+      p = functions[i](baseline_results[0]["conf_matrices"][0]) - functions[i](sentiment_results[0]["conf_matrices"][0])
+
+      # t statistic
+      ts.append(p / np.sqrt((1/5) * np.sum(variances[metrics[i]])))
+
+    print(ts)
+
+  def avg_stats_from_k_folds(self, result_path, save_path):
+    results = self.load_results(result_path)
+    precisions = []
+    recalls = []
+    f1_scores = []
+    coeffs = []
+    aucs = []
+
+    for run in results:
+
+      # combine matrices from both folds
+      mat = np.zeros((2,2))
+      for c in run["conf_matrices"]:
+        mat += c
+      
+      precisions.append(self.precision(mat))
+      recalls.append(self.recall(mat))
+      f1_scores.append(self.f1_score(mat))
+
+      coeffs.append(np.average(run["coefficients"], axis=0))
+      aucs.append(np.average(run["roc_auc_scores"]))
+    
     p_avg, p_std = np.average(precisions), np.std(precisions)
     r_avg, r_std = np.average(recalls), np.std(recalls)
     f1_avg, f1_std = np.average(f1_scores), np.std(f1_scores)
-
-    conf = np.zeros((2,2))
-    for c in conf_matrices:
-      conf = np.add(conf, c)
-
-    p_tot = self.precision(conf)
-    r_tot = self.recall(conf)
-    f1_tot = self.f1_score(conf)
-
-    coeffs_avg = np.average(coeffs, axis=0)
-    coeffs_std = np.std(coeffs, axis=0)
-
-    auc_avg = np.average(auc_scores)
-    auc_std = np.std(auc_scores)
+    auc_avg, auc_std = np.average(aucs), np.std(aucs)
+    coef_avg = np.average(coeffs, axis=0)
+    coef_std = np.std(coeffs, axis=0)
 
     with open(save_path + ".csv", "w") as f:
       f.write("{}\n".format(save_path))
-      f.write(",{},{},{}\n".format("Average", "Std", "Total"))
-      f.write("{},{},{},{}\n".format("Precision", p_avg, p_std, p_tot))
-      f.write("{},{},{},{}\n".format("Recall", r_avg, r_std, r_tot))
-      f.write("{},{},{},{}\n".format("F1 score", f1_avg, f1_std, f1_tot))
+      f.write(",{},{}\n".format("Mean", "SD"))
+      f.write("{},{},{}\n".format("Precision", p_avg, p_std))
+      f.write("{},{},{}\n".format("Recall", r_avg, r_std))
+      f.write("{},{},{}\n".format("F1 score", f1_avg, f1_std))
       
-      f.write("{}\n{},{}\n{},{}\n".format(
-        "Final confusion matrix",
-        int(conf[0][0]), int(conf[0][1]), int(conf[1,0]), int(conf[1,1])))
-
-      f.write("{}\n{},{}\n".format("Coefficients", "Average", "Std"))
-      for c_avg, c_std in zip(coeffs_avg, coeffs_std):
+      f.write("{}\n{},{}\n".format("Coefficients", "Mean", "SD"))
+      for c_avg, c_std in zip(coef_avg, coef_std):
         f.write("{},{}\n".format(c_avg, c_std))
 
-      f.write("{},{},{}\n".format("AUC", "Average", "Std"))
+      f.write("{},{},{}\n".format("AUC", "Mean", "SD"))
       f.write(",{},{}\n".format(auc_avg, auc_std))
 
-  def compare_k_fold(self):
-    path = "results/v_2_kfold_"
-    dp = DataProcessor()
-    dp.load('data/SQuAD/squad-v7.file')
+  def plot_error_bars(self):
+    base_y, base_std = [], []
+    base_coef, base_coef_std = [], []
 
-    model = LogRegModel()
-    model.load_vectors(dp.articles)
-    result = model.run_k_fold()
-    self.evaluate_k_fold(
-      result["conf_matrices"], 
-      result["coefficients"],
-      result["roc_auc_scores"], 
-      path + "sentiment_model")
+    with open('results/5x2_baseline_stats.csv', 'r') as f:
+      for idx, row in enumerate(f.readlines()):
+        if idx in range(2,5):
+          vals = row.strip().split(',')
+          base_y.append(float(vals[1]))
+          base_std.append(float(vals[2]))
 
-    result = model.run_k_fold(with_sentiment=False)
-    self.evaluate_k_fold(
-      result["conf_matrices"], 
-      result["coefficients"],
-      result["roc_auc_scores"], 
-      path + "baseline_model")
+        if idx in range(7,11):
+          vals = row.strip().split(',')
+          base_coef.append(float(vals[0]))
+          base_coef_std.append(float(vals[1]))
 
+    sent_y, sent_std = [], []
+    sent_coef, sent_coef_std = [], []
+
+    with open('results/5x2_sentiment_stats.csv', 'r') as f:
+      for idx, row in enumerate(f.readlines()):
+        if idx in range(2,5):
+          vals = row.strip().split(',')
+          sent_y.append(float(vals[1]))
+          sent_std.append(float(vals[2]))
+
+        if idx in range(7,15):
+          vals = row.strip().split(',')
+          sent_coef.append(float(vals[0]))
+          sent_coef_std.append(float(vals[1]))
+
+    # Result, precision, F1 score
+    plt.figure(0)
+    plt.errorbar(list(range(3)), base_y, base_std, linestyle='None', capsize=5, ecolor='orange')
+    plt.errorbar(list(range(3)), sent_y, sent_std, linestyle='None', capsize=8, ecolor='dodgerblue')
+    ora_patch = mpatches.Patch(color='orange', label='Baseline model')
+    blue_patch = mpatches.Patch(color='dodgerblue', label='Sentiment model')
+    plt.legend(handles=[blue_patch, ora_patch])
+    plt.xlabel('Metric')
+    plt.ylabel('Result')
+    plt.xticks(list(range(3)), ["Precision", "Recall", "F1 score"], rotation='45')
+    plt.tight_layout()
+    plt.savefig("results/final_metrics.svg")
+
+    # # Coefficients 1-4
+    # plt.figure(1)
+    # plt.errorbar(list(range(4)), base_coef, base_coef_std, linestyle='None', capsize=5, ecolor='orange')
+    # plt.errorbar(list(range(4)), sent_coef[:4], sent_coef_std[:4], linestyle='None', capsize=8, ecolor='dodgerblue')
+    # ora_patch = mpatches.Patch(color='orange', label='Baseline model')
+    # blue_patch = mpatches.Patch(color='dodgerblue', label='Sentiment model')
+    # plt.legend(handles=[blue_patch, ora_patch])
+    # plt.xlabel('Feature number')
+    # plt.ylabel('Coefficient value')
+    # plt.xticks(list(range(4)), ["1", "2", "3", "4"], rotation='45')
+    # plt.tight_layout()
+    # plt.savefig("results/first_coefficients.svg")
+
+    # # Coefficients 5-8
+    # plt.figure(2)
+    # plt.errorbar(list(range(4)), sent_coef[4:], sent_coef_std[4:], linestyle='None', capsize=8, ecolor='dodgerblue')
+    # blue_patch = mpatches.Patch(color='dodgerblue', label='Sentiment model')
+    # plt.legend(handles=[blue_patch])
+    # plt.xlabel('Feature number')
+    # plt.ylabel('Coefficient value')
+    # plt.xticks(list(range(4)), ["5", "6", "7", "8"], rotation='45')
+    # plt.tight_layout()
+    # plt.savefig("results/last_coefficients.svg")
+
+    # All coefficients
+    plt.figure(3)
+    plt.errorbar(list(range(4)), base_coef, base_coef_std, linestyle='None', capsize=5, ecolor='orange')
+    plt.errorbar(list(range(8)), sent_coef, sent_coef_std, linestyle='None', capsize=8, ecolor='dodgerblue')
+    plt.plot(list(range(8)), [0 for i in range(8)], color='r', ls='--', dashes=(5, 20), linewidth=1)
+    ora_patch = mpatches.Patch(color='orange', label='Baseline model (coefficients 1 to 4)')
+    blue_patch = mpatches.Patch(color='dodgerblue', label='Sentiment model (coefficients 1 to 8)')
+    plt.legend(handles=[blue_patch, ora_patch])
+    plt.xlabel('Coefficient number')
+    plt.ylabel('Coefficient value')
+    plt.xticks(list(range(8)), [str(i+1) for i in range(8)], rotation='45')
+    plt.tight_layout()
+    plt.savefig("results/all_coefficients.svg")
+
+
+
+  def save_results(self, results, file_path):
+    with open(file_path + ".file", "wb") as f:
+      pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
+  
+  def load_results(self, file_path):
+    with open(file_path + ".file", "rb") as f:
+      return pickle.load(f)
 
 
 if __name__ == "__main__":
   ev = Evaluator()
-  # ev.compare_k_fold()
-  # ev.compare_why_questions()
-  ev.plot_weights()
+  ev.plot_error_bars()
+  ev.run_5x2cv_paired_t_tests()
