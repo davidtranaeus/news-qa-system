@@ -1,7 +1,7 @@
 This project is (unfortunately) probably not runnable, but it might give some hints of what I was doing during my master's thesis.
 
 # Question answering system
-This is the code used for my master's thesis project during the spring of 2019. Still under development.
+This is the code used for my master's thesis project during the spring of 2019.
 
 ## Repo structure
 data_processing.py - Processes JSON files containing paragraphs, questions, and answers and creates a structured data model.  
